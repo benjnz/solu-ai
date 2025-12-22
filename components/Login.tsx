@@ -1,39 +1,38 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginWithGoogle } from '../services/auth';
 import LoadingAnimation from './LoadingAnimation';
+import { useUser } from '../contexts/UserContext';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { user, loading } = useUser();
 
   const handleGoogleLogin = async (role: 'client' | 'associate') => {
     setIsLoading(true);
     setError(null);
     try {
-      const user = await loginWithGoogle(role);
-      // Redirect based on role
-      if (user.role === 'associate') {
-        navigate('/associate');
-      } else {
-        navigate('/client');
-      }
+      await loginWithGoogle(role);
     } catch (error) {
       console.error("Login failed", error);
       setError("Authentication failed. Please try again.");
-      setIsLoading(false);
     }
   };
 
-  if (isLoading) {
+  if (loading || isLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
         <LoadingAnimation message="Authenticating" submessage="Connecting to Google Secure Service..." />
       </div>
     );
+  }
+
+  if (user) {
+    navigate(user.role === 'associate' ? '/associate' : '/client');
+    return null;
   }
 
   return (

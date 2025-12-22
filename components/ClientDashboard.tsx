@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { generateBlueprintFromJobDescription } from '../services/geminiService';
+import { generateBlueprintFromJobDescription } from '../services/functions';
 import { Blueprint, FinancialParams, JobPost } from '../types';
 import BlueprintChart from './BlueprintChart';
 import LoadingAnimation from './LoadingAnimation';

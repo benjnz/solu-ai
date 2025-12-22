@@ -1,8 +1,7 @@
-
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { getFirestore, doc, setDoc, getDoc } from 'firebase/firestore';
-import { firebaseConfig } from '../../firebaseConfig';
+import { firebaseConfig } from '../firebaseConfig';
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);

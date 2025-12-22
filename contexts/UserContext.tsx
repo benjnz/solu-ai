@@ -1,6 +1,6 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, onAuthChanged } from '../services/auth';
+import LoadingAnimation from '../components/LoadingAnimation';
 
 interface UserContextType {
   user: User | null;
@@ -9,7 +9,7 @@ interface UserContextType {
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
-export const UserProvider = ({ children }: { children: ReactNode }) => {
+export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -23,7 +23,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <UserContext.Provider value={{ user, loading }}>
-      {children}
+      {loading ? <LoadingAnimation /> : children}
     </UserContext.Provider>
   );
 };
