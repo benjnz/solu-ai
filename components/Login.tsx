@@ -1,22 +1,29 @@
+
 import React, { useState } from 'react';
-import { loginWithGoogle, User } from '../services/auth';
+import { useNavigate } from 'react-router-dom';
+import { loginWithGoogle } from '../services/auth';
 import LoadingAnimation from './LoadingAnimation';
-import { CheckCircle } from 'lucide-react';
+import { CheckCircle, AlertTriangle } from 'lucide-react';
 
-interface LoginProps {
-  onLogin: (user: User) => void;
-}
-
-const Login: React.FC<LoginProps> = ({ onLogin }) => {
+const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = async (role: 'client' | 'associate') => {
     setIsLoading(true);
+    setError(null);
     try {
-      const user = await loginWithGoogle();
-      onLogin(user);
+      const user = await loginWithGoogle(role);
+      // Redirect based on role
+      if (user.role === 'associate') {
+        navigate('/associate');
+      } else {
+        navigate('/client');
+      }
     } catch (error) {
       console.error("Login failed", error);
+      setError("Authentication failed. Please try again.");
       setIsLoading(false);
     }
   };
@@ -69,8 +76,15 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Associate Portal</h2>
         <p className="text-slate-500 mb-8">Sign in to access your dashboard or start your application.</p>
 
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg relative mb-6 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5"/> 
+            <span>{error}</span>
+          </div>
+        )}
+
         <button 
-          onClick={handleGoogleLogin}
+          onClick={() => handleGoogleLogin('associate')}
           className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-slate-900 text-white border border-transparent rounded-xl hover:bg-slate-800 hover:shadow-lg transition-all font-medium group"
         >
           <svg className="w-5 h-5 bg-white rounded-full p-0.5" viewBox="0 0 24 24">
