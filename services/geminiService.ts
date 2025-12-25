@@ -1,8 +1,6 @@
-
-import { getFunctions, httpsCallable } from "firebase/functions";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../firebaseConfig";
 import { WorkflowGraph, AssessmentResult, Blueprint } from "../types";
-
-const functions = getFunctions();
 
 // --- Callable Cloud Functions ---
 

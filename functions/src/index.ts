@@ -64,7 +64,7 @@ export const generateBlueprint = functions.https.onCall(async (data, context) =>
       **Your output MUST be a valid JSON object with NO markdown formatting.**
       The JSON object should conform to the following TypeScript interface:
 
-      '''
+      \`\`\`
       interface Blueprint {
         jobTitle: string;
         summary: string;
@@ -76,7 +76,7 @@ export const generateBlueprint = functions.https.onCall(async (data, context) =>
           recommendedTools: string[]; // e.g., ["Zapier", "UiPath", "GPT-4"]
         }>;
       }
-      '''
+      \`\`\`
 
       **Instructions:**
       1.  **jobTitle:** Extract or infer a concise job title.
@@ -84,10 +84,10 @@ export const generateBlueprint = functions.https.onCall(async (data, context) =>
       3.  **estimatedAnnualSavings:** Provide a realistic, conservative estimate of annual savings in USD, assuming a mid-level employee salary. Base this on the percentage of the role that can be automated. For a typical $65,000 salary, if 50% of tasks are automated, savings might be around $32,500.
       4.  **tasks:**
           *   Break down the primary responsibilities of the role into distinct, actionable tasks.
-          *   For each task, provide a `taskName`.
-          *   Provide clear `reasoning` for its automation potential.
-          *   Assign an `automationScore` from 0 (impossible to automate) to 100 (fully automatable).
-          *   Suggest specific and realistic `recommendedTools` for automating the task.
+          *   For each task, provide a \`taskName\`.
+          *   Provide clear \`reasoning\` for its automation potential.
+          *   Assign an \`automationScore\` from 0 (impossible to automate) to 100 (fully automatable).
+          *   Suggest specific and realistic \`recommendedTools\` for automating the task.
     `;
 
     const result = await model.generateContent(prompt);
@@ -133,18 +133,16 @@ export const evaluateWorkflow = functions.https.onCall(async (data, context) => 
   // For this project, we'll allow any authenticated user to try the challenge.
 
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
     const prompt = `
       You are an expert systems analyst and an automation competition judge.
-      Your task is to evaluate a candidate's proposed automation workflow against a given job description.
+      Your task is to evaluate a candidate\'s proposed automation workflow against a given job description.
 
       **1. The Original Job Description:**
       ---
       ${jobDescription}
       ---
 
-      **2. The Candidate's Proposed Workflow (as a JSON graph):**
+      **2. The Candidate\'s Proposed Workflow (as a JSON graph):**
       ---
       ${JSON.stringify(workflowGraph, null, 2)}
       ---
@@ -158,22 +156,22 @@ export const evaluateWorkflow = functions.https.onCall(async (data, context) => 
       **Your Output MUST be a valid JSON object with NO markdown formatting.**
       The JSON object should conform to the following TypeScript interface:
 
-      '''
+      \`\`\`
       interface AssessmentResult {
         score: number; // An overall score from 0 to 100.
         feedback: string; // Detailed, constructive feedback for the candidate. Explain the score.
         passed: boolean; // True if the score is 70 or above.
       }
-      '''
+      \`\`\`
 
       **Instructions:**
-      1.  **score:** Provide a fair `score` from 0-100 based on the criteria. Be critical but fair.
+      1.  **score:** Provide a fair \`score\` from 0-100 based on the criteria. Be critical but fair.
           - 90-100: Excellent, comprehensive, and logical.
           - 70-89: Good, covers most aspects but may have minor inefficiencies.
           - 50-69: Decent attempt, but has logical flaws or misses key tasks.
           - 0-49: Poor, fundamentally misunderstands the requirements or the tools.
-      2.  **feedback:** Write a concise (3-5 sentences) `feedback` paragraph. Start by stating the strongest part of the workflow, then explain what could be improved.
-      3.  **passed:** Set `passed` to true if the score is 70 or higher, otherwise false.
+      2.  **feedback:** Write a concise (3-5 sentences) \`feedback\` paragraph. Start by stating the strongest part of the workflow, then explain what could be improved.
+      3.  **passed:** Set \`passed\` to true if the score is 70 or higher, otherwise false.
     `;
 
     const generationConfig = {

@@ -1,12 +1,7 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, getDocs, doc, onSnapshot, query, where, orderBy, serverTimestamp, setDoc } from 'firebase/firestore';
-import { firebaseConfig } from '../firebaseConfig';
+import { collection, addDoc, getDocs, doc, onSnapshot, query, where, orderBy, serverTimestamp, setDoc } from 'firebase/firestore';
+import { db } from '../firebaseConfig'; // Import the initialized db instance
 import { JobPost, MicroTask, Company } from '../types'; 
 import { User } from './auth';
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
 
 // Collections
 const usersCollection = collection(db, 'users');

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loginWithGoogle } from '../services/auth';
 import LoadingAnimation from './LoadingAnimation';
@@ -11,6 +11,12 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { user, loading } = useUser();
 
+  useEffect(() => {
+    if (user) {
+      navigate(user.role === 'associate' ? '/associate' : '/client');
+    }
+  }, [user, navigate]);
+
   const handleGoogleLogin = async (role: 'client' | 'associate') => {
     setIsLoading(true);
     setError(null);
@@ -19,6 +25,7 @@ const Login: React.FC = () => {
     } catch (error) {
       console.error("Login failed", error);
       setError("Authentication failed. Please try again.");
+      setIsLoading(false);
     }
   };
 
@@ -31,8 +38,7 @@ const Login: React.FC = () => {
   }
 
   if (user) {
-    navigate(user.role === 'associate' ? '/associate' : '/client');
-    return null;
+    return null; // Don't render anything while navigating away
   }
 
   return (
