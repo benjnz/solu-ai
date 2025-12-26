@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import LoadingAnimation from './LoadingAnimation';
 import { useUser } from '../contexts/UserContext';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
@@ -8,14 +8,20 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, login, loading } = useUser();
 
   // Redirect if already logged in
   useEffect(() => {
     if (user && !isLoading) {
-      navigate(user.role === 'associate' ? '/associate' : '/client');
+      const from = location.state?.from?.pathname;
+      if (from) {
+        navigate(from, { replace: true });
+      } else {
+        navigate(user.role === 'associate' ? '/associate' : '/client', { replace: true });
+      }
     }
-  }, [user, navigate, isLoading]);
+  }, [user, navigate, isLoading, location.state]);
 
   const handleGoogleLogin = async (role: 'client' | 'associate') => {
     setIsLoading(true);

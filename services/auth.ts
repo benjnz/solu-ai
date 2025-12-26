@@ -28,7 +28,7 @@ const createUserDocument = async (user: FirebaseUser, role: 'client' | 'associat
 };
 
 // Sign in with Google
-export const loginWithGoogle = async (role: 'client' | 'associate'): Promise<User> => {
+export const login = async (role: 'client' | 'associate'): Promise<User> => {
   const { user } = await signInWithPopup(auth, provider);
   await createUserDocument(user, role);
   const userDoc = await getDoc(doc(db, 'users', user.uid));

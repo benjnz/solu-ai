@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, onAuthChanged } from '../services/auth';
+import { User, onAuthChanged, login as authLogin, logout as authLogout } from '../services/auth';
 
 interface UserContextType {
   user: User | null;
   loading: boolean;
+  login: (role: 'client' | 'associate') => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -20,8 +22,18 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => unsubscribe();
   }, []);
 
+  const login = async (role: 'client' | 'associate') => {
+    const loggedInUser = await authLogin(role);
+    setUser(loggedInUser);
+  };
+
+  const logout = async () => {
+    await authLogout();
+    setUser(null);
+  };
+
   return (
-    <UserContext.Provider value={{ user, loading }}>
+    <UserContext.Provider value={{ user, loading, login, logout }}>
       {children}
     </UserContext.Provider>
   );
