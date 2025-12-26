@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, onAuthChanged } from '../services/auth';
-import LoadingAnimation from '../components/LoadingAnimation';
 
 interface UserContextType {
   user: User | null;
@@ -23,7 +22,7 @@ export const UserProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   return (
     <UserContext.Provider value={{ user, loading }}>
-      {loading ? <LoadingAnimation /> : children}
+      {children}
     </UserContext.Provider>
   );
 };

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loginWithGoogle } from '../services/auth';
 import LoadingAnimation from './LoadingAnimation';
 import { useUser } from '../contexts/UserContext';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
@@ -9,19 +8,21 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-  const { user, loading } = useUser();
+  const { user, login, loading } = useUser();
 
+  // Redirect if already logged in
   useEffect(() => {
-    if (user) {
+    if (user && !isLoading) {
       navigate(user.role === 'associate' ? '/associate' : '/client');
     }
-  }, [user, navigate]);
+  }, [user, navigate, isLoading]);
 
   const handleGoogleLogin = async (role: 'client' | 'associate') => {
     setIsLoading(true);
     setError(null);
     try {
-      await loginWithGoogle(role);
+      await login(role);
+      // Navigation is handled by the useEffect above once user state updates
     } catch (error) {
       console.error("Login failed", error);
       setError("Authentication failed. Please try again.");
@@ -29,6 +30,7 @@ const Login: React.FC = () => {
     }
   };
 
+  // Show loading if app is checking session OR if login transaction is in progress
   if (loading || isLoading) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">
@@ -37,8 +39,9 @@ const Login: React.FC = () => {
     );
   }
 
+  // Prevent flicker if user is present but redirect hasn't happened yet
   if (user) {
-    return null; // Don't render anything while navigating away
+    return null;
   }
 
   return (

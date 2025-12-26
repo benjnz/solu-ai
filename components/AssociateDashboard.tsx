@@ -591,9 +591,15 @@ const AssociateDashboard: React.FC<AssociateDashboardProps> = ({ availableJobs }
   const submitWorkflow = async () => {
     setIsLoading(true);
     const graph: WorkflowGraph = { nodes, connections };
-    const result = await evaluateWorkflow(SAMPLE_JOB_DESC, graph);
-    setGradingResult(result);
-    if (result.passed) setIsVetted(true);
+    
+    // Destructure 'data' to access the actual AssessmentResult
+    const { data } = await evaluateWorkflow({ 
+      jobDescription: SAMPLE_JOB_DESC, 
+      workflowGraph: graph // FIX: Changed 'workflow' to 'workflowGraph'
+    });
+    
+    setGradingResult(data);
+    if (data.passed) setIsVetted(true);
     setIsLoading(false);
   };
 
