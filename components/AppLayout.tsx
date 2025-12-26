@@ -16,7 +16,6 @@ const AppLayout: React.FC = () => {
 
   const isClient = location.pathname.includes('client');
   const isAssociate = location.pathname.includes('associate');
-  const isLogin = location.pathname === '/login';
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-amber-200 flex flex-col">
@@ -47,7 +46,7 @@ const AppLayout: React.FC = () => {
                  </div>
               ) : (
                 <>
-                  <Link to="/login" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isLogin ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}>
+                  <Link to="/associate" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isAssociate ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}>
                     For Associates
                   </Link>
                   <Link to="/client" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isClient ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}>
