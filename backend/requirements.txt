@@ -1,0 +1,22 @@
+fastapi
+uvicorn
+crewai
+pydantic
+langchain
+langchain-community
+openai
+python-dotenv
+pycryptodome
+pymupdf
+# Add any specialized tool dependencies here
+google-api-python-client
+google-auth-oauthlib
+google-auth-httplib2
+slack-sdk
+hubspot-api-client
+psycopg2-binary
+firebase-admin
+pandas
+langchain-google-genai
+pydantic-settings
+google-generativeai

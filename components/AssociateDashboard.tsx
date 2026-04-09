@@ -1,13 +1,14 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { evaluateWorkflow } from '../services/geminiService';
-import { getCompanies, getMicroTasks, completeMicroTask } from '../services/api';
+import { getCompanies, getMicroTasks, completeMicroTask } from '../services/db';
+import { auth } from '../firebaseConfig';
 import { JobPost, AssessmentResult, WorkflowNode, WorkflowConnection, WorkflowGraph, Company, MicroTask } from '../types';
 import { 
   BadgeCheck, Briefcase, Award, Lock, 
   BrainCircuit, Zap, Database, Server, FileText, 
   Cpu, Plus, X, ArrowRight, Play, CheckCircle, Trash2, Mail,
   ChevronDown, ChevronUp, Info, Clock, DollarSign, Activity, Settings, PenTool,
-  Gem, Building2, Gavel, Search
+  Gem, Building2, Gavel, Search, Hexagon, AlertTriangle, ShieldCheck
 } from 'lucide-react';
 import LoadingAnimation from './LoadingAnimation';
 
@@ -46,6 +47,7 @@ const cfg = (shape: ShapeType, props: Partial<PatternItemConfig> = {}): PatternI
   fill: 'solid',
   ...props
 });
+
 
 // 20 Visual Pattern Questions - Progressive Difficulty
 const IQ_QUESTIONS: IQQuestion[] = [
@@ -271,10 +273,10 @@ const IQ_QUESTIONS: IQQuestion[] = [
     id: 20,
     logic: "Sides +1, Color Cycle (R,B,G), Rotation +45°",
     sequence: [
-        cfg('triangle', {color: 'text-red-500', rotation: 0}),     // 3 sides, Red, 0
-        cfg('square',   {color: 'text-blue-500', rotation: 45}),   // 4 sides, Blue, 45
+        cfg('triangle', {color: 'text-red-500', rotation: 0}),      // 3 sides, Red, 0
+        cfg('square',   {color: 'text-blue-500', rotation: 45}),    // 4 sides, Blue, 45
         cfg('pentagon', {color: 'text-green-500', rotation: 90}), // 5 sides, Green, 90
-        cfg('hexagon',  {color: 'text-red-500', rotation: 135})    // 6 sides, Red, 135
+        cfg('hexagon',  {color: 'text-red-500', rotation: 135})     // 6 sides, Red, 135
     ],
     // Next: 7 sides (Star), Blue, 180
     options: [
@@ -328,6 +330,7 @@ const PatternRenderer: React.FC<{ config: PatternItemConfig, className?: string 
       };
   };
 
+  
   return (
     <div className={`relative w-24 h-24 flex items-center justify-center ${color} ${className}`}>
         {Array.from({ length: shape === 'bar' ? 1 : count }).map((_, i) => {
@@ -364,8 +367,7 @@ const PatternRenderer: React.FC<{ config: PatternItemConfig, className?: string 
 
 const SAMPLE_JOB_DESC = `
   **Role:** Senior Customer Support & Onboarding Specialist.
-  **Responsibilities:** 
-  1. Monitor shared inbox for new client emails.
+  **Responsibilities:** 1. Monitor shared inbox for new client emails.
   2. Categorize emails into 'Support', 'Sales', or 'Billing'.
   3. If 'Support', check knowledge base. If answer found, draft reply using tone guidelines.
   4. If 'Sales', log lead in CRM (Salesforce) and notify account manager via Slack.
@@ -375,8 +377,8 @@ const SAMPLE_JOB_DESC = `
 
 const TOOLBOX_ITEMS = [
   { type: 'trigger', label: 'Email Trigger', icon: 'zap', color: 'bg-purple-500' },
-  { type: 'ai-tool', label: 'ChatGPT (GPT-4)', icon: 'brain', color: 'bg-amber-500' },
-  { type: 'ai-tool', label: 'Gemini 1.5 Pro', icon: 'brain', color: 'bg-amber-500' },
+  { type: 'ai-tool', label: 'ChatGPT (GPT-5)', icon: 'brain', color: 'bg-amber-500' },
+  { type: 'ai-tool', label: 'Gemini 3', icon: 'brain', color: 'bg-amber-500' },
   { type: 'action', label: 'Send Slack Msg', icon: 'message', color: 'bg-blue-500' },
   { type: 'action', label: 'Update CRM', icon: 'database', color: 'bg-blue-500' },
   { type: 'compute', label: 'Python Script', icon: 'cpu', color: 'bg-slate-600' },
@@ -398,6 +400,10 @@ const AssociateDashboard: React.FC<AssociateDashboardProps> = ({ availableJobs }
   const [isVetted, setIsVetted] = useState(false);
   const [activeTab, setActiveTab] = useState<'bids' | 'careers' | 'solutes'>('bids');
   const [solutesBalance, setSolutesBalance] = useState(0);
+
+  // --- NEW STATE: ONBOARDING MODAL ---
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false);
+  const [showSoluteInfoModal, setShowSoluteInfoModal] = useState(false);
 
   // --- IQ TEST STATE ---
   const [currentIqIndex, setCurrentIqIndex] = useState(0);
@@ -423,6 +429,27 @@ const AssociateDashboard: React.FC<AssociateDashboardProps> = ({ availableJobs }
   // Evaluation State
   const [isLoading, setIsLoading] = useState(false);
   const [gradingResult, setGradingResult] = useState<AssessmentResult | null>(null);
+  const [error, setError] = useState<string | null>(null); // Added Error State
+
+// Professional Assessment State
+const [timeLeft, setTimeLeft] = useState(1200); // 20 minutes (in seconds)
+  
+// Timer Logic
+useEffect(() => {
+  if (view === 'iq-test' && timeLeft > 0) {
+    const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
+    return () => clearInterval(timer);
+  } else if (timeLeft === 0 && view === 'iq-test') {
+    setView('iq-complete'); // Auto-submit on timeout
+  }
+}, [timeLeft, view]);
+
+// Helper to format time
+const formatTime = (seconds: number) => {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+};
 
   // --- API DATA STATE ---
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -455,10 +482,17 @@ const AssociateDashboard: React.FC<AssociateDashboardProps> = ({ availableJobs }
 
   // --- SOLUTE LOGIC ---
   const handleTaskComplete = async (taskId: string, reward: number) => {
-      const success = await completeMicroTask(taskId);
-      if (success) {
+      const userId = auth.currentUser?.uid;
+      if (!userId) {
+        alert("You must be logged in to complete tasks.");
+        return;
+      }
+      try {
+        await completeMicroTask(taskId, userId);
         setSolutesBalance(prev => prev + reward);
         alert(`Task Completed! You earned ${reward} Solutes.`);
+      } catch (err: any) {
+        alert(`Error completing task: ${err.message}`);
       }
   };
 
@@ -471,12 +505,8 @@ const AssociateDashboard: React.FC<AssociateDashboardProps> = ({ availableJobs }
     if (currentIqIndex < IQ_QUESTIONS.length - 1) { 
       setCurrentIqIndex(prev => prev + 1);
     } else {
-      // Finish Test
-      setIsLoading(true);
-      setTimeout(() => {
-        setIsLoading(false);
-        setView('iq-complete');
-      }, 1500);
+      // Finish Test immediately
+      setView('iq-complete');
     }
   };
 
@@ -588,25 +618,119 @@ const AssociateDashboard: React.FC<AssociateDashboardProps> = ({ availableJobs }
       }
   };
 
+  // --- SUBMIT LOGIC ---
   const submitWorkflow = async () => {
     setIsLoading(true);
-    const graph: WorkflowGraph = { nodes, connections };
+    setError(null);
     
-    // Destructure 'data' to access the actual AssessmentResult
-    const { data } = await evaluateWorkflow({ 
-      jobDescription: SAMPLE_JOB_DESC, 
-      workflowGraph: graph // FIX: Changed 'workflow' to 'workflowGraph'
-    });
-    
-    setGradingResult(data);
-    if (data.passed) setIsVetted(true);
-    setIsLoading(false);
+    try {
+      const graph: WorkflowGraph = { nodes, connections };
+      const { data } = await evaluateWorkflow({ 
+        jobDescription: SAMPLE_JOB_DESC, 
+        workflowGraph: graph 
+      });
+      
+      setGradingResult(data);
+      if (data.passed) setIsVetted(true);
+    } catch (err: any) {
+      console.error("Workflow evaluation failed:", err);
+      setError(err.message || "System Error: Unable to verify workflow. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // --- RENDER FUNCTIONS ---
 
   const renderProfile = () => (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
+      
+      {/* --- ONBOARDING INSTRUCTION MODAL --- */}
+      {showOnboardingModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+            
+            {/* Modal Header */}
+            <div className="bg-slate-50 px-8 py-6 border-b border-slate-100 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">Sovereign Verification Process</h3>
+                <p className="text-sm text-slate-500">How to become a Sovereign Associate</p>
+
+              </div>
+              <button 
+                onClick={() => setShowOnboardingModal(false)}
+                className="p-2 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-8 space-y-8">
+              {/* Step 1 */}
+              <div className="flex gap-5">
+                <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center shrink-0 border-4 border-white shadow-sm text-amber-600 font-bold text-lg">
+                  1
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 flex items-center gap-2">
+                    Cognitive Pattern Assessment
+                    <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full uppercase">5 Mins</span>
+                  </h4>
+                  <p className="text-sm text-slate-600 mt-1 leading-relaxed">
+                    A 20-question visual IQ test designed to evaluate your pattern recognition and logical reasoning capabilities.
+                  </p>
+                </div>
+              </div>
+
+              {/* Step 2 */}
+              <div className="flex gap-5">
+                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center shrink-0 border-4 border-white shadow-sm text-blue-600 font-bold text-lg">
+                  2
+                </div>
+                <div>
+                  <h4 className="font-bold text-slate-900 flex items-center gap-2">
+                    Nodal Agent Challenge
+                    <span className="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full uppercase">10 Mins</span>
+
+                  </h4>
+                  <p className="text-sm text-slate-600 mt-1 leading-relaxed">
+                    A practical engineering task. You will be given a client brief and must construct a working automation workflow using our node-based tool.
+                  </p>
+                </div>
+              </div>
+
+              <div className="bg-amber-50 border border-amber-100 rounded-lg p-4 flex gap-3">
+                 <Info className="w-5 h-5 text-amber-600 shrink-0" />
+                 <p className="text-xs text-amber-800">
+                   <strong>Note:</strong> You must score above 85% on the combined assessment to access client projects. You can retake the assessment after 24 hours if you fail.
+                 </p>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="bg-slate-50 px-8 py-5 border-t border-slate-100 flex justify-end gap-3">
+              <button 
+                onClick={() => setShowOnboardingModal(false)}
+                className="px-5 py-2.5 text-slate-600 font-medium hover:text-slate-900 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  setShowOnboardingModal(false);
+                  setView('iq-test');
+                }}
+                className="px-6 py-2.5 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800 transition-all flex items-center gap-2 shadow-lg hover:shadow-xl hover:-translate-y-0.5"
+              >
+                Begin Assessment <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- DASHBOARD PROFILE CONTENT --- */}
       <div className="bg-white p-8 rounded-2xl shadow-sm border border-slate-200">
         <div className="flex items-center gap-6 mb-8">
             <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center text-3xl">👨‍💻</div>
@@ -615,21 +739,29 @@ const AssociateDashboard: React.FC<AssociateDashboardProps> = ({ availableJobs }
                 <div className="flex items-center gap-2 text-slate-500 mt-1">
                     <span className={`flex items-center gap-1 text-sm font-medium ${isVetted ? 'text-green-600' : 'text-amber-600'}`}>
                         {isVetted ? <BadgeCheck className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                        {isVetted ? 'Vetted Associate' : 'Pending Verification'}
+                        {isVetted ? 'Sovereign Associate' : 'Elite Candidate'}
+
                     </span>
                 </div>
             </div>
         </div>
+        
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="p-6 bg-slate-50 rounded-xl border border-slate-100">
                 <h3 className="font-semibold text-slate-900 mb-2">Verification Status</h3>
                 <p className="text-sm text-slate-600 mb-4">Complete the IQ test and Nodal Automation Challenge to unlock client projects.</p>
                 {!isVetted ? (
-                     <button onClick={() => setView('iq-test')} className="w-full py-2 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors">
-                     Start Vetting Process
-                   </button>
+                      <button 
+                        onClick={() => setShowOnboardingModal(true)} 
+                        className="w-full py-2 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors"
+                      >
+                        Start Onboarding Process
+                    </button>
                 ) : (
-                    <button onClick={() => setView('dashboard')} className="w-full py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors shadow-sm">
+                    <button 
+                        onClick={() => setView('dashboard')} 
+                        className="w-full py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors shadow-sm"
+                    >
                         Enter Workspace
                     </button>
                 )}
@@ -637,7 +769,11 @@ const AssociateDashboard: React.FC<AssociateDashboardProps> = ({ availableJobs }
             <div className="p-6 bg-slate-50 rounded-xl border border-slate-100">
                 <h3 className="font-semibold text-slate-900 mb-2">Platform Activity</h3>
                 <p className="text-sm text-slate-600 mb-4">{availableJobs.length} active projects matching your skills.</p>
-                <button onClick={() => isVetted ? setView('dashboard') : null} disabled={!isVetted} className={`w-full py-2 rounded-lg font-medium transition-colors border ${isVetted ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' : 'bg-slate-100 text-slate-400 border-transparent cursor-not-allowed'}`}>
+                <button 
+                    onClick={() => isVetted ? setView('dashboard') : null} 
+                    disabled={!isVetted} 
+                    className={`w-full py-2 rounded-lg font-medium transition-colors border ${isVetted ? 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50' : 'bg-slate-100 text-slate-400 border-transparent cursor-not-allowed'}`}
+                >
                     View Dashboard
                 </button>
             </div>
@@ -647,53 +783,122 @@ const AssociateDashboard: React.FC<AssociateDashboardProps> = ({ availableJobs }
   );
 
   const renderIQTest = () => {
-    if (isLoading) return <LoadingAnimation message="Calculating IQ Score" submessage="Analyzing patterns and cognitive metrics..." />;
+    if (isLoading) {
+        return (
+            <div className="h-[60vh] flex flex-col items-center justify-center space-y-4">
+                <LoadingAnimation message="Processing Response" submessage="Analyzing cognitive patterns..." />
+            </div>
+        );
+    }
 
     const question = IQ_QUESTIONS[currentIqIndex];
 
     return (
-        <div className="max-w-3xl mx-auto space-y-8 animate-in fade-in zoom-in-95 duration-500">
-            <div className="flex items-center justify-between">
-                <button onClick={() => setView('profile')} className="text-slate-500 hover:text-slate-900 text-sm">&larr; Exit</button>
-                <span className="text-sm font-bold text-amber-600">Pattern {currentIqIndex + 1} / {IQ_QUESTIONS.length}</span>
+        <div className="max-w-5xl mx-auto min-h-[calc(100vh-100px)] flex flex-col animate-in fade-in duration-500">
+            
+            {/* --- ASSESSMENT HUD --- */}
+            <div className="bg-white border-b border-slate-200 px-6 py-4 flex justify-between items-center sticky top-0 z-10 rounded-t-xl">
+                <div>
+                    <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Assessment Protocol</h2>
+                    <div className="flex items-center gap-2 text-slate-900 font-mono font-medium">
+                        <span>S-294.B</span>
+                        <span className="text-slate-300">|</span>
+                        <span>Item {currentIqIndex + 1} of {IQ_QUESTIONS.length}</span>
+                    </div>
+                </div>
+                <div className="flex items-center gap-6">
+                    <div className="text-right">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Time Remaining</p>
+                        <p className={`font-mono text-xl font-bold ${timeLeft < 60 ? 'text-red-600 animate-pulse' : 'text-slate-900'}`}>
+                            {formatTime(timeLeft)}
+                        </p>
+                    </div>
+                    <button 
+                        onClick={() => setView('profile')} 
+                        className="px-3 py-1.5 text-xs font-medium text-slate-500 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                    >
+                        ABORT
+                    </button>
+                </div>
             </div>
 
-            <div className="bg-white p-8 rounded-2xl shadow-lg border border-slate-200">
-                <div className="mb-8">
-                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full bg-amber-500 transition-all duration-300" style={{ width: `${((currentIqIndex + 1) / IQ_QUESTIONS.length) * 100}%` }}></div>
+            {/* --- PROGRESS BAR --- */}
+            <div className="h-1 w-full bg-slate-100">
+                <div 
+                    className="h-full bg-slate-900 transition-all duration-500 ease-out" 
+                    style={{ width: `${((currentIqIndex + 1) / IQ_QUESTIONS.length) * 100}%` }}
+                ></div>
+            </div>
+
+            <div className="flex-1 bg-slate-50/50 p-6 md:p-10 flex flex-col items-center gap-8">
+                
+                {/* --- PROBLEM MATRIX --- */}
+                <div className="w-full max-w-4xl bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                    <div className="bg-slate-100/50 border-b border-slate-200 px-4 py-2 flex justify-between items-center">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sequence Data</span>
+                        <Info className="w-4 h-4 text-slate-300" />
+                    </div>
+                    
+                    <div 
+                        className="p-8 md:p-12 flex flex-wrap items-center justify-center gap-8 md:gap-12 min-h-[200px]"
+                        style={{
+                            backgroundImage: 'radial-gradient(#cbd5e1 1px, transparent 1px)',
+                            backgroundSize: '20px 20px'
+                        }}
+                    >
+                        {question.sequence.map((item, idx) => (
+                            <div key={idx} className="relative group">
+                                <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-mono text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    FIG.{idx + 1}
+                                </div>
+                                <div className="bg-white p-2 rounded-xl shadow-sm border border-slate-200">
+                                    <PatternRenderer config={item} />
+                                </div>
+                                {idx < question.sequence.length - 1 && (
+                                    <div className="absolute top-1/2 -right-8 md:-right-10 -translate-y-1/2 text-slate-300">
+                                        <ArrowRight className="w-5 h-5" />
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                        
+                        {/* The "Unknown" Slot */}
+                        <div className="relative">
+                            <div className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-mono text-slate-400">
+                                TARGET
+                            </div>
+                            <div className="w-28 h-28 bg-slate-100 rounded-xl border-2 border-dashed border-slate-300 flex items-center justify-center shadow-inner animate-pulse">
+                                <span className="text-3xl font-bold text-slate-300">?</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <div className="text-center mb-8">
-                    <h2 className="text-xl font-bold text-slate-900 mb-2">Complete the Pattern</h2>
-                    <p className="text-slate-500 text-sm">Select the item that logically follows the sequence below.</p>
+                {/* --- SELECTION MATRIX --- */}
+                <div className="w-full max-w-4xl">
+                    <div className="text-center mb-4">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Select Logical Continuation</span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        {question.options.map((opt, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => handleIqAnswer(idx)}
+                                className="group relative bg-white hover:bg-slate-50 p-6 rounded-xl border border-slate-200 hover:border-amber-400 hover:shadow-md transition-all duration-200 flex flex-col items-center gap-3 active:scale-95 active:border-amber-600 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                            >
+                                <div className="absolute top-2 left-3 text-[10px] font-bold text-slate-300 group-hover:text-amber-500">
+                                    OPT {String.fromCharCode(65 + idx)}
+                                </div>
+                                <PatternRenderer config={opt} />
+                                <div className="w-4 h-4 rounded-full border-2 border-slate-200 group-hover:border-amber-500 mt-2 flex items-center justify-center">
+                                    <div className="w-2 h-2 rounded-full bg-amber-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
-                {/* Sequence Display */}
-                <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8 mb-12 p-6 bg-slate-50 rounded-xl border border-slate-100">
-                    {question.sequence.map((item, idx) => (
-                        <div key={idx} className="flex items-center gap-4 md:gap-8">
-                             <PatternRenderer config={item} className="bg-white rounded-lg shadow-sm border border-slate-200" />
-                             <ArrowRight className="w-5 h-5 text-slate-300" />
-                        </div>
-                    ))}
-                    <div className="w-24 h-24 bg-slate-200 rounded-lg border-2 border-dashed border-slate-300 flex items-center justify-center text-slate-400 font-bold text-2xl">?</div>
-                </div>
-
-                {/* Options Display */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {question.options.map((opt, idx) => (
-                        <button
-                            key={idx}
-                            onClick={() => handleIqAnswer(idx)}
-                            className="flex flex-col items-center p-4 rounded-xl border-2 border-transparent hover:border-amber-500 hover:bg-amber-50 transition-all group"
-                        >
-                            <PatternRenderer config={opt} className="bg-white rounded-lg shadow-sm border border-slate-200 group-hover:shadow-md" />
-                            <span className="mt-2 text-xs font-semibold text-slate-400 group-hover:text-amber-600">Option {idx + 1}</span>
-                        </button>
-                    ))}
-                </div>
             </div>
         </div>
     );
@@ -756,6 +961,37 @@ const AssociateDashboard: React.FC<AssociateDashboardProps> = ({ availableJobs }
 
   const renderNodeChallenge = () => {
     if (isLoading) return <div className="flex items-center justify-center h-[600px]"><LoadingAnimation message="Evaluating Workflow" submessage="Analyzing logic..." /></div>;
+
+    // --- UPDATED ERROR DISPLAY WITH BYPASS ---
+    if (error) {
+      return (
+        <div className="max-w-2xl mx-auto pt-10 animate-in fade-in zoom-in-95">
+          <div className="p-8 rounded-2xl border bg-red-50 border-red-200 shadow-sm text-center">
+            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Server className="w-8 h-8 text-red-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-900 mb-2">Server Connection Error</h2>
+            <p className="text-slate-600 mb-6 font-mono text-xs bg-red-100/50 p-2 rounded">{error}</p>
+            
+            <div className="flex flex-col gap-3 justify-center sm:flex-row">
+                <button 
+                onClick={() => { setError(null); submitWorkflow(); }} 
+                className="px-6 py-3 bg-red-600 text-white rounded-lg font-semibold hover:bg-red-700 transition-colors shadow-sm"
+                >
+                Retry Connection
+                </button>
+            </div>
+
+            <button 
+              onClick={() => setError(null)} 
+              className="block w-full mt-6 text-sm text-slate-500 hover:text-slate-800 underline"
+            >
+              Back to Editor
+            </button>
+          </div>
+        </div>
+      );
+    }
 
     if (gradingResult) {
       return (
@@ -962,24 +1198,24 @@ const AssociateDashboard: React.FC<AssociateDashboardProps> = ({ availableJobs }
 
                 <svg className="absolute inset-0 pointer-events-none w-full h-full z-0 overflow-visible">
                   <defs>
-                     <marker id="head" orient="auto" markerWidth="6" markerHeight="6" refX="5" refY="3">
+                      <marker id="head" orient="auto" markerWidth="6" markerHeight="6" refX="5" refY="3">
                         <path d="M0,0 L0,6 L6,3 z" fill="#94a3b8" />
-                     </marker>
+                      </marker>
                   </defs>
                   
                   {/* Dynamic Connection Line */}
                   {isConnecting && selectedNodeId && (
-                     <path 
-                       d={getBezierPath(
+                      <path 
+                        d={getBezierPath(
                            nodes.find(n => n.id === selectedNodeId)!,
                            mousePos
-                       )}
-                       stroke="#cbd5e1" 
-                       strokeWidth="3" 
-                       fill="none"
-                       strokeDasharray="5,5"
-                       className="animate-pulse"
-                     />
+                        )}
+                        stroke="#cbd5e1" 
+                        strokeWidth="3" 
+                        fill="none"
+                        strokeDasharray="5,5"
+                        className="animate-pulse"
+                      />
                   )}
 
                   {/* Existing Connections */}
@@ -1048,20 +1284,103 @@ const AssociateDashboard: React.FC<AssociateDashboardProps> = ({ availableJobs }
   };
 
   const renderDashboard = () => (
-    <div className="max-w-6xl mx-auto space-y-6 animate-in slide-in-from-right-4 duration-500">
+    <div className="max-w-6xl mx-auto space-y-6 animate-in slide-in-from-right-4 duration-500 relative">
+        
+        {/* --- SOLUTES INFO MODAL --- */}
+        {showSoluteInfoModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200 p-4">
+                <div className="bg-white rounded-2xl shadow-2xl border border-slate-200 max-w-lg w-full overflow-hidden animate-in zoom-in-95 duration-200">
+                    <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
+                        <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                            <ShieldCheck className="w-5 h-5 text-green-600" />
+                            The Solumetrics Ecosystem
+                        </h3>
+                        <button 
+                            onClick={() => setShowSoluteInfoModal(false)}
+                            className="p-1 hover:bg-slate-200 rounded-full text-slate-400 transition-colors"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+                    <div className="p-6 space-y-6">
+                        
+                        {/* WARNING BOX */}
+                        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 items-start">
+                            <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                            <div>
+                                <h4 className="font-bold text-amber-800 text-sm">Strict Meritocracy</h4>
+                                <p className="text-sm text-amber-700 mt-1">
+                                    Solutes <strong>cannot be bought, sold, or transferred</strong>. They are exclusively earned through verified work on the Solumetrics dashboard.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="flex gap-4">
+                                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center shrink-0">
+                                    <Hexagon className="w-5 h-5 text-slate-700" />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-slate-900 text-sm">What are Solutes?</h4>
+                                    <p className="text-sm text-slate-600">The metric of your professional reputation. Earning Solutes unlocks higher tiers of access within the platform.</p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center shrink-0">
+                                    <Gavel className="w-5 h-5 text-slate-700" />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-slate-900 text-sm">Project Bids</h4>
+                                    <p className="text-sm text-slate-600">Use your reputation score to place bids on high-value client automation projects.</p>
+                                </div>
+                            </div>
+
+                            <div className="flex gap-4">
+                                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center shrink-0">
+                                    <Building2 className="w-5 h-5 text-slate-700" />
+                                </div>
+                                <div>
+                                    <h4 className="font-bold text-slate-900 text-sm">Career Opportunities</h4>
+                                    <p className="text-sm text-slate-600">High Solute balances reveal exclusive full-time roles at top-tier tech firms.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="bg-slate-50 px-6 py-4 border-t border-slate-100 text-center">
+                        <button onClick={() => setShowSoluteInfoModal(false)} className="text-sm font-medium text-slate-600 hover:text-slate-900">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
+
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
             <div>
                  <button onClick={() => setView('profile')} className="text-slate-500 hover:text-slate-900 text-sm mb-2 block">&larr; Back to Profile</button>
                  <h2 className="text-3xl font-bold text-slate-900">Associate Workspace</h2>
                  <p className="text-slate-500">Manage your projects, career, and reputation.</p>
             </div>
+            
+            {/* UPDATED HEADER SECTION */}
             <div className="flex items-center gap-4 bg-slate-50 px-6 py-3 rounded-xl border border-slate-100">
                 <div className="text-right">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Solutes Balance</p>
+                    <div className="flex items-center justify-end gap-2 mb-0.5">
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Solutes Balance</p>
+                        <button 
+                            onClick={() => setShowSoluteInfoModal(true)}
+                            className="text-slate-400 hover:text-slate-600 transition-colors"
+                            title="How Solutes Work"
+                        >
+                            <Info className="w-3.5 h-3.5" />
+                        </button>
+                    </div>
                     <p className="text-2xl font-bold text-slate-900">{solutesBalance.toLocaleString()}</p>
                 </div>
-                <div className="w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center border-4 border-white shadow-sm">
-                    <Gem className="w-6 h-6 text-amber-500" />
+                {/* NEW BLACK AND WHITE ICON */}
+                <div className="w-12 h-12 bg-slate-900 rounded-full flex items-center justify-center border-4 border-white shadow-sm">
+                    <Hexagon className="w-6 h-6 text-white" strokeWidth={2.5} />
                 </div>
             </div>
         </div>
@@ -1188,13 +1507,31 @@ const AssociateDashboard: React.FC<AssociateDashboardProps> = ({ availableJobs }
   );
 
   return (
-    <div className="w-full">
-      {view === 'profile' && renderProfile()}
-      {view === 'iq-test' && renderIQTest()}
-      {view === 'iq-complete' && renderIQComplete()}
-      {view === 'node-intro' && renderNodeIntro()}
-      {view === 'node-challenge' && renderNodeChallenge()}
-      {view === 'dashboard' && renderDashboard()}
+    <div className="min-h-screen bg-slate-50 font-sans selection:bg-amber-100">
+        {/* --- GLOBAL HEADER START --- */}
+        <nav className="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-50">
+            <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 bg-slate-900 rounded-lg flex items-center justify-center shadow-sm">
+                    <Hexagon className="w-5 h-5 text-amber-400 fill-amber-400/20" strokeWidth={2.5} />
+                </div>
+                <span className="text-lg font-bold tracking-tight text-slate-900">solumetrics</span>
+            </div>
+            {view !== 'profile' && view !== 'dashboard' && (
+                <div className="text-xs font-medium text-slate-400 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
+                   Restricted Environment
+                </div>
+            )}
+        </nav>
+        {/* --- GLOBAL HEADER END --- */}
+
+        <div className="w-full p-6">
+            {view === 'profile' && renderProfile()}
+            {view === 'iq-test' && renderIQTest()}
+            {view === 'iq-complete' && renderIQComplete()}
+            {view === 'node-intro' && renderNodeIntro()}
+            {view === 'node-challenge' && renderNodeChallenge()}
+            {view === 'dashboard' && renderDashboard()}
+        </div>
     </div>
   );
 };

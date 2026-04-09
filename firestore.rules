@@ -1,12 +1,60 @@
+
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    // This rule allows any authenticated user to read and write to the database.
-    // This is useful for development, but you should secure your data before
-    // going to production.
-    // See https://firebase.google.com/docs/firestore/security/get-started
-    match /{document=**} {
+
+    // Allow users to read and write to their own user document
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Allow clients to create, read, and update jobs
+    match /jobs/{jobId} {
+      allow read, create, update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'client';
+      // Allow associates to read and update jobs
+      allow read, update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'associate';
+    }
+
+    // Allow authenticated users to read microtasks
+    match /microtasks/{microtaskId} {
+      allow read: if request.auth != null;
+    }
+
+    // Allow associates to read, create and update submissions
+    match /submissions/{submissionId} {
+      allow read, create, update: if request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'associate';
+    }
+
+    // Deployment & Agent Management
+    match /deployed_agents/{agentId} {
+      allow read: if true; // Public access for subdomain resolution
+      allow write: if request.auth != null; // Authenticated users can deploy/manage
+      
+      // Nested collections
+      match /approvals/{approvalId} {
+        allow read, write: if request.auth != null;
+      }
+      match /logs/{logId} {
+        allow read, write: if request.auth != null;
+      }
+      match /missions/{missionId} {
+        allow read, write: if request.auth != null;
+      }
+    }
+
+    match /mission_archives/{missionId} {
+      allow read: if true; // Portals need to show historical missions
+      allow write: if request.auth != null;
+    }
+
+    match /build_requests/{requestId} {
       allow read, write: if request.auth != null;
+    }
+
+    match /governance/{governanceId} {
+      allow read: if true;
+      allow write: if request.auth != null;
     }
   }
 }

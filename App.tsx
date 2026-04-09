@@ -1,40 +1,222 @@
-import React, { useState } from 'react';
-import { HashRouter, Routes, Route, Link, useLocation, useNavigate, Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { HashRouter, Routes, Route, Link, useLocation, useNavigate, Navigate, Outlet } from 'react-router-dom';
+import { UserProvider, useUser } from './contexts/UserContext';
+import { getAuth, signInAnonymously } from "firebase/auth";
+
+// Components
 import ClientDashboard from './components/ClientDashboard';
 import AssociateDashboard from './components/AssociateDashboard';
+import AdminDashboard from './components/AdminDashboard';
 import Login from './components/Login';
-import { User, logout } from './services/auth';
+import BusinessLogin from './components/BusinessLogin';
+import InstantTool from './components/InstantTool';
+import HowItWorks from './components/HowItWorks';
+import LoadingAnimation from './components/LoadingAnimation';
+import EmployeePortal from './components/EmployeePortal';
+import { getBuildRequests, updateBuildRequestStatus, createBuildRequest, getAgentBySubdomain } from './services/db';
 import { JobPost } from './types';
-import { Terminal, Users, LayoutDashboard, LogOut } from 'lucide-react';
+import { Terminal, Users, LayoutDashboard, LogOut, User as UserIcon, Zap, ArrowRight, BrainCircuit, Menu, X, ShieldCheck, Activity, Cpu, Layers } from 'lucide-react';
+import { db } from './firebaseConfig';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+
+// Diagnostic Boot Sequence
+console.log("[solu-boot] Initializing Sovereignty Engine...");
+console.log("[solu-boot] Domain context:", {
+  host: window.location.hostname,
+  path: window.location.pathname,
+  protocol: window.location.protocol
+});
+
+
+// --- 1. Protected Route Wrapper ---
+const ProtectedRoute = () => {
+  const { user, isInitialized } = useUser();
+  const location = useLocation();
+
+  if (!isInitialized) return null; // Wait for auth to initialize
+
+  if (!user) {
+    // If not logged in, redirect to login
+    // Determine which login page based on where they were trying to go
+    if (location.pathname.includes('/admin') || location.pathname.includes('/associate')) {
+      return <Navigate to="/login" state={{ from: location }} replace />;
+    }
+    return <Navigate to="/business-login" state={{ from: location }} replace />;
+  }
+
+  return <Outlet />;
+};
 
 const AppContent: React.FC = () => {
   const [activeJobs, setActiveJobs] = useState<JobPost[]>([]);
-  const [user, setUser] = useState<User | null>(null);
+  const [isToolOpen, setIsToolOpen] = useState(false);
+  const [isToolAdvanced, setIsToolAdvanced] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [deployedAgents, setDeployedAgents] = useState<any[]>([]);
+  const { user, logout, isInitialized } = useUser();
   const location = useLocation();
   const navigate = useNavigate();
+  const hasInitializedPortal = React.useRef<string | null>(null);
+  const [portalAgent, setPortalAgent] = useState<any>(null);
+  const [isPortalLoading, setIsPortalLoading] = useState(true);
 
-  const handlePostJob = (job: JobPost) => {
-    setActiveJobs(prev => [job, ...prev]);
+  // Subdomain Detection Logic
+  const getSubdomain = () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const agentParam = urlParams.get('agent');
+    if (agentParam) {
+      console.log(`[App:Debug] Manual override detected: ${agentParam}`);
+      return agentParam.toLowerCase();
+    }
+
+    const hostname = window.location.hostname;
+    const parts = hostname.split('.');
+
+    console.info(`[App:Debug] Resolving domain context for: "${hostname}"`);
+
+    // Domain Safelist: Skip resolution for explicitly defined root domains
+    const rootDomains = ['localhost', 'solu.uk', 'www.solu.uk', 'soluaiblueprint-62038680-8d4ee.web.app', 'soluaiblueprint-62038680-8d4ee.firebaseapp.com'];
+    if (rootDomains.includes(hostname)) {
+      return null;
+    }
+
+    // 1. Localhost Testing (agent1.localhost)
+    if (hostname.endsWith('localhost') && parts.length >= 2) {
+      return parts[0].toLowerCase();
+    }
+
+    // 2. Production Anchor Detection (e.g. agent1.solu.uk or www.agent1.solu.uk)
+    // We look for 'solu' as the anchor domain name
+    const domainAnchorIndex = parts.indexOf('solu');
+    if (domainAnchorIndex > 0) {
+        // The subdomain is the part immediately before 'solu'
+        // If it's agent1.solu.uk -> index 0
+        // If it's www.agent1.solu.uk -> index 1
+        const subdomain = parts[domainAnchorIndex - 1];
+        if (subdomain !== 'www') {
+            console.log(`[App:Debug] Anchor-based subdomain located: ${subdomain}`);
+            return subdomain.toLowerCase();
+        }
+    }
+
+    // 3. Fallback: Standard Production Subdomains (agent1.anything.com)
+    if (!hostname.includes('.web.app') && !hostname.includes('.firebaseapp.com') && parts.length >= 3) {
+      return parts[0].toLowerCase();
+    }
+
+    return null;
   };
 
-  const handleLogin = (loggedInUser: User) => {
-    setUser(loggedInUser);
-    // Redirect based on role or previous location
-    if (loggedInUser.role === 'associate') {
-      navigate('/associate');
+  const [agentNotFound, setAgentNotFound] = useState(false);
+
+  useEffect(() => {
+    const subdomain = getSubdomain();
+    if (subdomain) {
+      console.log(`[App:Registry] Starting lookup for: ${subdomain}`);
+      getAgentBySubdomain(subdomain).then(agent => {
+        if (agent) {
+          console.info(`[App:Registry] Agent located for [${subdomain}]: ${agent.id}`, agent.portalConfig);
+          setPortalAgent(agent);
+          if (agent.portalConfig && hasInitializedPortal.current !== agent.id) {
+            hasInitializedPortal.current = agent.id;
+          }
+        } else {
+          console.warn(`[App:Registry] No agent record found in Sovereignty Registry for: ${subdomain}`);
+          setAgentNotFound(true);
+        }
+        setIsPortalLoading(false);
+      }).catch(err => {
+        console.error(`[App:Registry] Lookup FAILED for ${subdomain}:`, err);
+        setIsPortalLoading(false);
+      });
     } else {
-      navigate('/client');
+      setIsPortalLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const q = query(collection(db, 'deployed_agents'), orderBy('deployedAt', 'desc'));
+    const unsub = onSnapshot(q, (snapshot) => {
+      setDeployedAgents(snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id })));
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = getBuildRequests((jobs) => {
+      setActiveJobs(jobs);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0b0f19]">
+        <LoadingAnimation message="Securing Session" submessage="Re-establishing your autonomous connection..." />
+      </div>
+    );
+  }
+
+  if (isPortalLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0b0f19]">
+        <LoadingAnimation message="Resolving Autonomous Domain" submessage="Querying the Sovereignty Agent Registry..." />
+      </div>
+    );
+  }
+
+  if (agentNotFound) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#0b0f19] p-6 text-center">
+        <div className="max-w-md space-y-8 animate-in zoom-in duration-500">
+          <div className="w-24 h-24 bg-rose-500/10 rounded-3xl flex items-center justify-center mx-auto border border-rose-500/20">
+            <ShieldCheck className="w-12 h-12 text-rose-500 opacity-50" />
+          </div>
+          <div className="space-y-4">
+            <h1 className="text-4xl font-black text-white tracking-tighter uppercase">Domain Unresolved</h1>
+            <p className="text-slate-500 font-mono text-[10px] uppercase tracking-widest leading-relaxed">
+              The requested agent namespace is not registered in the Solu AI Collective.
+            </p>
+          </div>
+          <button 
+            onClick={() => window.location.href = 'https://solu.uk'}
+            className="px-8 py-4 bg-white/5 border border-white/10 rounded-2xl text-[10px] font-black text-white uppercase tracking-[0.2em] hover:bg-white/10 transition-all"
+          >
+            Return to Headquarters
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // If we are in a subdomain and found an agent, show the portal
+  if (portalAgent) {
+    return <EmployeePortal agent={portalAgent} />;
+  }
+
+  const handlePostJob = async (newJob: JobPost) => {
+    try {
+      await createBuildRequest(newJob);
+    } catch (err) {
+      console.error("Failed to create build request:", err);
+    }
+  };
+
+  const handleUpdateJob = async (jobId: string, status: JobPost['status']) => {
+    try {
+      await updateBuildRequestStatus(jobId, status);
+    } catch (err) {
+      console.error("Failed to update job status:", err);
     }
   };
 
   const handleLogout = async () => {
     await logout();
-    setUser(null);
-    navigate('/');
+    setIsMobileMenuOpen(false);
   };
 
   const isClient = location.pathname.includes('client');
-  const isAssociate = location.pathname.includes('associate');
+  const isBusinessLogin = location.pathname === '/business-login';
   const isLogin = location.pathname === '/login';
 
   return (
@@ -43,60 +225,300 @@ const AppContent: React.FC = () => {
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
-            <Link to="/" className="flex items-center gap-2 group">
-              <img 
-                src="data:image/png;base64,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" 
-                alt="solu AI Logo" 
-                className="w-8 h-8 rounded-lg"
-              />
-              <span className="font-bold text-xl tracking-tight">solu<span className="text-slate-400">AI</span></span>
-            </Link>
-            
+            <div className="flex items-center gap-8">
+              <Link to="/" className="flex items-center gap-3 group shrink-0" onClick={() => setIsMobileMenuOpen(false)}>
+                <div className="w-10 h-10 flex items-center justify-center transition-transform duration-300 p-1">
+                  <img src="/logo.png" alt="solu AI Logo" className="w-full h-full object-contain" />
+                </div>
+                <span className="font-black text-xl tracking-tighter text-slate-900">solu<span className="text-amber-500">AI</span></span>
+              </Link>
+
+              <div className="flex md:flex items-center gap-4">
+                <Link
+                  to="/how-it-works"
+                  className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors"
+                >
+                  How it works
+                </Link>
+              </div>
+            </div>
+
             <div className="flex gap-4 items-center">
-              {user ? (
-                 <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                        <img src={user.avatar} alt={user.name} className="w-8 h-8 rounded-full border border-slate-200" />
-                        <span className="text-sm font-medium text-slate-700 hidden md:inline">{user.name}</span>
+              <div className="flex md:flex items-center gap-4">
+                <button
+                  onClick={() => setIsToolOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-500/20 hover:bg-amber-500/30 transition-all shadow-sm"
+                >
+                  <Zap className="w-3 h-3" /> Instant Blueprint
+                </button>
+
+                {user ? (
+                  <div className="flex items-center gap-4">
+                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full w-2/3 bg-rose-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.3)]" />
                     </div>
-                    <button 
+                    <div className="flex items-center gap-2">
+                      {user.avatar ? (
+                        <img src={user.avatar} alt={user.name || 'User'} className="w-8 h-8 rounded-full border border-slate-200 object-cover" />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center shadow-inner">
+                          <UserIcon className="w-4 h-4 text-slate-500" />
+                        </div>
+                      )}
+                      <span className="text-sm font-medium text-slate-700">{user.name || 'Anonymous User'}</span>
+                    </div>
+                    <button
                       onClick={handleLogout}
                       className="p-2 text-slate-400 hover:text-red-500 transition-colors"
                       title="Sign Out"
                     >
                       <LogOut className="w-5 h-5" />
                     </button>
-                 </div>
-              ) : (
-                <>
-                  <Link to="/login" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isLogin ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}>
-                    For Associates
-                  </Link>
-                  <Link to="/client" className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${isClient ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}>
-                    For Business
-                  </Link>
-                </>
-              )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Link to="/login" className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${isLogin ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:text-slate-900'}`}>Associates</Link>
+                    <Link to="/business-login" className={`px-4 py-2 rounded-xl text-sm font-bold transition-all bg-slate-900 text-white hover:bg-black shadow-lg`}>For Business</Link>
+                  </div>
+                )}
+              </div>
+
+              {/* Mobile Menu Button */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+              >
+                {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
             </div>
           </div>
         </div>
+
+        {/* Mobile menu drawer */}
+        {isMobileMenuOpen && (
+          <div className="md:hidden fixed inset-0 z-40 bg-slate-900/10 backdrop-blur-md animate-in fade-in duration-300 overflow-hidden h-screen flex flex-col pt-16">
+            <div className="flex-1 bg-white p-6 space-y-8 animate-in slide-in-from-top-4 duration-300 shadow-2xl">
+              <div className="space-y-4">
+                <Link
+                  to="/how-it-works"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="w-full text-left px-4 py-3 text-lg font-bold text-slate-900 flex items-center gap-3 hover:bg-slate-50 rounded-2xl transition-all"
+                >
+                  <BrainCircuit className="w-5 h-5 text-amber-500" />
+                  How it works
+                </Link>
+                <button
+                  onClick={() => { setIsToolOpen(true); setIsMobileMenuOpen(false); }}
+                  className="w-full text-left px-4 py-3 text-lg font-bold text-slate-900 flex items-center gap-3 hover:bg-slate-50 rounded-2xl transition-all"
+                >
+                  <Zap className="w-5 h-5 text-amber-500" />
+                  Instant Blueprint
+                </button>
+              </div>
+
+              <div className="pt-8 border-t border-slate-100">
+                {user ? (
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-4 px-4">
+                      {user.avatar ? (
+                        <img src={user.avatar} alt={user.name || 'User'} className="w-12 h-12 rounded-full border border-slate-200" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+                          <UserIcon className="w-6 h-6 text-slate-500" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="font-bold text-slate-900">{user.name || 'Expert'}</p>
+                        <p className="text-xs text-slate-500">{user.email}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-6 py-4 bg-red-50 text-red-600 rounded-2xl font-bold transition-all"
+                    >
+                      <LogOut className="w-5 h-5" /> Sign Out
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-4">
+                    <Link
+                      to="/login"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="w-full text-center py-4 bg-slate-100 text-slate-900 rounded-2xl font-bold text-lg"
+                    >
+                      Associate Login
+                    </Link>
+                    <Link
+                      to="/business-login"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="w-full text-center py-4 bg-slate-900 text-white rounded-2xl font-bold text-lg shadow-xl shadow-slate-900/20"
+                    >
+                      Client Portal
+                    </Link>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
+
+
+      {/* Global Mission Awareness Banner */}
+      {(location.pathname.includes('client') || location.pathname.includes('associate') || location.pathname.includes('admin')) && (
+        <div className="bg-slate-900 border-b border-white/5 py-3 px-4 overflow-hidden relative group">
+          <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-transparent to-rose-500/10 opacity-50" />
+          <div className="max-w-7xl mx-auto flex items-center justify-center gap-12 relative text-white">
+            
+            {user?.role === 'client' && user.companyDetails && (
+              <>
+                <div className="flex items-center gap-3 shrink-0">
+                  <ShieldCheck className="w-4 h-4 text-amber-500" />
+                  <div className="flex flex-col">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-tight">Enterprise</span>
+                    <span className="text-xs font-black tracking-tighter truncate max-w-[120px] leading-tight">{user.companyDetails.name}</span>
+                  </div>
+                </div>
+                <div className="h-6 w-px bg-white/10 shrink-0" />
+                <div className="flex items-center gap-3 shrink-0">
+                  <Layers className="w-4 h-4 text-slate-400" />
+                  <div className="flex flex-col">
+                    <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-tight">Industry</span>
+                    <span className="text-xs font-black tracking-tighter leading-tight">{user.companyDetails.industry}</span>
+                  </div>
+                </div>
+                <div className="h-6 w-px bg-white/10 shrink-0" />
+              </>
+            )}
+
+            <div className="flex items-center gap-3">
+              <Activity className="w-4 h-4 text-indigo-400" />
+              <div className="flex flex-col">
+                  {user?.role === 'client' ? 'Deployed' : 'Active Agents'}
+                <span className="text-sm font-black tracking-tighter leading-tight">
+                  {user?.role === 'client' 
+                    ? deployedAgents.filter(a => a.clientId === user.uid || (!a.clientId && (a.clientName === user.name || a.clientName === user.email))).length
+                    : deployedAgents.length} 
+                  <span className="text-[8px] text-indigo-400 uppercase tracking-widest ml-1">Live</span>
+                </span>
+              </div>
+            </div>
+            
+            <div className="h-6 w-px bg-white/10" />
+            
+            <div className="flex items-center gap-3">
+              <Zap className="w-4 h-4 text-amber-400" />
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-tight">
+                  {user?.role === 'client' ? 'Awaiting' : 'Consumption'}
+                </span>
+                <span className="text-sm font-black tracking-tighter leading-tight">
+                  {user?.role === 'client'
+                    ? activeJobs.filter(j => (j.clientId === user.uid || (!j.clientId && (j.clientName === user.name || j.clientName === user.email))) && (j.status === 'Open' || j.status === 'open')).length
+                    : `$${deployedAgents.reduce((acc, a) => acc + (a.total_cost_usd || 0), 0).toFixed(4)}`}
+                  <span className="text-[8px] text-indigo-400 uppercase tracking-widest ml-1">
+                    {user?.role === 'client' ? 'Requests' : 'Live'}
+                  </span>
+                </span>
+              </div>
+            </div>
+
+            <div className="h-6 w-px bg-white/10" />
+
+            <div className="flex items-center gap-3">
+              <Cpu className="w-4 h-4 text-indigo-400" />
+              <div className="flex flex-col">
+                <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-tight">
+                  {user?.role === 'client' ? 'Fleet Cost' : 'Latency'}
+                </span>
+                <span className="text-sm font-black tracking-tighter leading-tight">
+                  {user?.role === 'client'
+                    ? `$${deployedAgents.filter(a => a.clientId === user.uid || (!a.clientId && (a.clientName === user.name || a.clientName === user.email))).reduce((acc, a) => acc + (a.total_cost_usd || 0), 0).toFixed(4)}`
+                    : '124ms'} 
+                  <span className="text-[8px] text-indigo-400 uppercase tracking-widest ml-1">Real-time</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+
+
         <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login onLogin={handleLogin} />} />
-          <Route 
-            path="/client" 
-            element={<ClientDashboard onPostJob={handlePostJob} />} 
+          <Route path="/" element={<Home user={user} onOpenTool={() => setIsToolOpen(true)} />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/business-login" element={<BusinessLogin />} />
+          <Route
+            path="/client"
+            element={user?.role === 'admin' ? <Navigate to="/admin" replace /> : <ClientDashboard onPostJob={handlePostJob} onOpenTool={() => { setIsToolAdvanced(true); setIsToolOpen(true); }} activeJobs={activeJobs} />}
           />
-          <Route 
-            path="/associate" 
-            element={user ? <AssociateDashboard availableJobs={activeJobs} /> : <Navigate to="/login" />} 
-          />
+          <Route element={<ProtectedRoute />}>
+            <Route
+              path="/associate"
+              element={user?.role === 'admin' ? <Navigate to="/admin" replace /> : <AssociateDashboard availableJobs={activeJobs} />}
+            />
+            <Route
+              path="/admin"
+              element={<AdminDashboard jobs={activeJobs} onUpdateJob={handleUpdateJob} deployedAgents={deployedAgents} />}
+            />
+            <Route
+              path="/admin/request/:id"
+              element={<AdminDashboard jobs={activeJobs} onUpdateJob={handleUpdateJob} deployedAgents={deployedAgents} />}
+            />
+          </Route>
         </Routes>
       </main>
+
+      {/* Instant Tool Modal */}
+      {isToolOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300"
+          onClick={() => setIsToolOpen(false)}
+        >
+          <div
+            className="bg-white w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-[3rem] shadow-2xl relative animate-in zoom-in-95 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => { setIsToolOpen(false); setIsToolAdvanced(false); }}
+              className="absolute top-8 right-8 p-3 bg-slate-100 rounded-2xl text-slate-400 hover:text-slate-900 hover:bg-slate-200 transition-all z-10"
+            >
+              <LogOut className="w-6 h-6 rotate-180" />
+            </button>
+            <div className="p-8 md:p-12">
+              <InstantTool
+                variant={isToolAdvanced ? 'advanced' : 'full'}
+                onSuccess={(blueprint) => {
+                  setIsToolOpen(false);
+                  setIsToolAdvanced(false);
+
+                  // Auto-submit to admin queue
+                  const newJob: JobPost = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    clientId: user?.uid,
+                    clientName: user?.name || user?.email || "New Client",
+                    blueprint: blueprint,
+                    status: 'Open',
+                    postedDate: new Date().toLocaleDateString(),
+                    budgetRange: blueprint.recommendedBudget || "auto"
+                  };
+                  if (user?.companyDetails) {
+                    newJob.companyDetails = user.companyDetails;
+                  }
+                  
+                  handlePostJob(newJob);
+
+                  navigate('/client', { state: { blueprint } });
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white mt-auto">
@@ -108,50 +530,46 @@ const AppContent: React.FC = () => {
   );
 };
 
-const Home: React.FC = () => {
+const Home: React.FC<{ user: any; onOpenTool: () => void }> = ({ user, onOpenTool }) => {
   return (
-    <div className="flex flex-col items-center justify-center space-y-16 py-12 animate-in fade-in duration-700">
-      <div className="text-center max-w-3xl space-y-6">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 text-amber-600 text-xs font-bold uppercase tracking-wider border border-amber-100 mb-4">
-           The AI Readiness Blueprint
+    <div className="w-full flex flex-col items-center space-y-16 py-12">
+      <div className="flex flex-col items-center text-center max-w-4xl space-y-8 animate-in fade-in slide-in-from-top-10 duration-1000">
+        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 text-amber-600 text-sm font-black uppercase tracking-widest border border-amber-500/20 mx-auto">
+          <Zap className="w-4 h-4" /> The AI Readiness Engine
         </div>
-        <h1 className="text-5xl md:text-6xl font-extrabold text-slate-900 tracking-tight leading-tight">
-          Turn Job Descriptions into <br/>
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-amber-600">Automated Reality</span>
+        <h1 className="text-6xl md:text-8xl font-black text-slate-900 tracking-tighter leading-[1.3] mb-8 pb-8">
+          Turn Roles into <br />
+          <span className="text-amber-500 px-8 py-3 inline-block">Automations</span>
         </h1>
-        <p className="text-xl text-slate-500 leading-relaxed max-w-2xl mx-auto">
-          solu AI connects businesses needing efficiency with the world's best automation associates. 
-          Generate instant ROI blueprints and hire vetted talent.
+        <p className="text-xl md:text-2xl text-slate-500 max-w-2xl mx-auto font-medium leading-relaxed">
+          Input a job description to instantly generate a step-by-step technological architecture for automating any professional role.
         </p>
+        <div className="pt-8">
+          <button
+            onClick={onOpenTool}
+            className="px-10 py-5 bg-amber-500 text-slate-900 font-extrabold text-xl rounded-2xl shadow-2xl shadow-amber-500/20 hover:bg-amber-400 hover:-translate-y-1 transition-all flex items-center gap-3"
+          >
+            <Zap className="w-6 h-6" /> Instant Blueprint Tool
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl">
-        <Link to="/client" className="group relative overflow-hidden bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <LayoutDashboard className="w-32 h-32" />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-12 w-full max-w-5xl">
+        <Link to={user?.role === 'admin' ? "/admin" : (user?.role === 'client' ? "/client" : "/business-login")} className="group bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 hover:shadow-2xl hover:-translate-y-2 transition-all duration-500">
+          <div className="w-16 h-16 bg-slate-900 rounded-[1.5rem] flex items-center justify-center text-white mb-8 group-hover:scale-110 transition-transform">
+            <Users className="w-8 h-8" />
           </div>
-          <div className="w-12 h-12 bg-slate-900 rounded-xl flex items-center justify-center text-white mb-6">
-            <Users className="w-6 h-6" />
-          </div>
-          <h3 className="text-2xl font-bold text-slate-900 mb-2">I need Automation</h3>
-          <p className="text-slate-500 mb-6">Instantly analyze roles, calculate ROI, and find associates to build your workflow.</p>
-          <span className="text-amber-600 font-semibold flex items-center gap-2 group-hover:gap-3 transition-all">
-            Get Started <span className="text-xl">&rarr;</span>
-          </span>
+          <h3 className="text-3xl font-black text-slate-900 mb-4 flex items-center gap-2">I need Automation <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" /></h3>
+          <p className="text-slate-500 text-lg font-medium leading-relaxed">Scale your business by deconstructing roles and deploying intelligent, automated AI agents.</p>
         </Link>
 
-        <Link to="/associate" className="group relative overflow-hidden bg-white p-8 rounded-2xl shadow-sm border border-slate-200 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <Terminal className="w-32 h-32" />
+        <Link to={user?.role === 'admin' ? "/admin" : (user?.role === 'associate' ? "/associate" : "/login")} className="group bg-slate-900 p-10 rounded-[3rem] shadow-2xl border border-slate-800 hover:shadow-amber-500/10 hover:-translate-y-2 transition-all duration-500 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-[100px]"></div>
+          <div className="w-16 h-16 bg-amber-500 rounded-[1.5rem] flex items-center justify-center text-white mb-8 group-hover:scale-110 transition-transform">
+            <Terminal className="w-8 h-8" />
           </div>
-           <div className="w-12 h-12 bg-amber-500 rounded-xl flex items-center justify-center text-white mb-6">
-            <Terminal className="w-6 h-6" />
-          </div>
-          <h3 className="text-2xl font-bold text-slate-900 mb-2">I am an Associate</h3>
-          <p className="text-slate-500 mb-6">Pass AI-powered assessments, prove your skills, and access high-value projects.</p>
-          <span className="text-slate-900 font-semibold flex items-center gap-2 group-hover:gap-3 transition-all">
-            Join Talent Pool <span className="text-xl">&rarr;</span>
-          </span>
+          <h3 className="text-3xl font-black text-white mb-4 flex items-center gap-2">I am an Associate <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" /></h3>
+          <p className="text-slate-400 text-lg font-medium leading-relaxed">Join the elite network of automation experts building the next generation of business infrastructure.</p>
         </Link>
       </div>
     </div>
@@ -159,10 +577,16 @@ const Home: React.FC = () => {
 };
 
 const App: React.FC = () => {
+  // We remove the direct signInAnonymously from here because it's better handled 
+  // in specific flows (like InstantTool) or as a fallback in UserContext if needed.
+  // Keeping it here might overwrite a real session during reload before onAuthChanged fires.
+  
   return (
-    <HashRouter>
-      <AppContent />
-    </HashRouter>
+    <UserProvider>
+      <HashRouter>
+        <AppContent />
+      </HashRouter>
+    </UserProvider>
   );
 };
 

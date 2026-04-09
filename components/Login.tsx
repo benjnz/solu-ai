@@ -1,119 +1,210 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import LoadingAnimation from './LoadingAnimation';
 import { useUser } from '../contexts/UserContext';
-import { CheckCircle, AlertTriangle } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Mail, Lock, User, ArrowRight, Terminal } from 'lucide-react';
 
 const Login: React.FC = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLogin, setIsLogin] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, login, loading } = useUser();
+  const { login, loginWithEmail, registerWithEmail } = useUser();
 
-  // Redirect if already logged in
-  useEffect(() => {
-    if (user && !isLoading) {
-      const from = location.state?.from?.pathname;
-      if (from) {
-        navigate(from, { replace: true });
-      } else {
-        navigate(user.role === 'associate' ? '/associate' : '/client', { replace: true });
-      }
-    }
-  }, [user, navigate, isLoading, location.state]);
+  const from = (location.state as any)?.from?.pathname || '/associate';
 
-  const handleGoogleLogin = async (role: 'client' | 'associate') => {
-    setIsLoading(true);
+  const handleGoogleLogin = async () => {
+    setIsLoggingIn(true);
     setError(null);
     try {
-      await login(role);
-      // Navigation is handled by the useEffect above once user state updates
-    } catch (error) {
-      console.error("Login failed", error);
-      setError("Authentication failed. Please try again.");
-      setIsLoading(false);
+      await login('associate');
+      navigate(from, { replace: true });
+    } catch (err: any) {
+      console.error("Login failed", err);
+      setError(err.message || "Authentication failed. Please try again.");
+      setIsLoggingIn(false);
     }
   };
 
-  // Show loading if app is checking session OR if login transaction is in progress
-  if (loading || isLoading) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
+    setError(null);
+    try {
+      if (isLogin) {
+        await loginWithEmail(email, password);
+      } else {
+        await registerWithEmail(email, password, 'associate', name);
+      }
+      navigate(from, { replace: true });
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message || 'Authentication failed');
+      setIsLoggingIn(false);
+    }
+  };
+
+  if (isLoggingIn) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <LoadingAnimation message="Authenticating" submessage="Connecting to Google Secure Service..." />
+      <div className="min-h-[80vh] flex items-center justify-center">
+        <LoadingAnimation 
+          message={isLogin ? "Signing you in..." : "Joining the elite..."} 
+          submessage="Connecting to our secure Associate network." 
+        />
       </div>
     );
   }
 
-  // Prevent flicker if user is present but redirect hasn't happened yet
-  if (user) {
-    return null;
-  }
-
   return (
-    <div className="flex flex-col md:flex-row items-center justify-center min-h-[80vh] px-4 gap-12 animate-in fade-in slide-in-from-bottom-8 duration-700">
-      
-      {/* Left side: Associate Value Prop */}
-      <div className="max-w-md space-y-6">
-        <h1 className="text-4xl font-bold text-slate-900 tracking-tight">
+    <div className="flex flex-col md:flex-row items-center justify-center min-h-[80vh] px-4 py-12 gap-12 lg:gap-24 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      {/* Left Column: Associate Value Prop */}
+      <div className="max-w-md space-y-8">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-xs font-bold uppercase tracking-wider border border-amber-100">
+           <Terminal className="w-4 h-4" /> Sovereign Associate Network
+        </div>
+
+        <h1 className="text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
           Become a solu AI <br/>
-          <span className="text-amber-600">Associate</span>
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">Expert Agent</span>
         </h1>
-        <p className="text-lg text-slate-600">
-          Join the elite network of automation experts. Pass our AI vetting process and get matched with high-value enterprise projects instantly.
+        <p className="text-lg text-slate-500 leading-relaxed font-medium">
+          Join the elite network of sovereign automation experts. Solve complex enterprise problems and deploy autonomous agents at scale.
         </p>
-        
-        <div className="space-y-4 pt-4">
-          {[
-            "Access pre-analyzed automation blueprints",
-            "Smart matching with enterprise clients",
-            "AI-powered vetting & skill verification",
-            "Secure payments & project management"
-          ].map((item, i) => (
-            <div key={i} className="flex items-center gap-3">
-              <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-              <span className="text-slate-700 font-medium">{item}</span>
-            </div>
-          ))}
+
+        <div className="space-y-5 pt-4">
+          <div className="flex items-center gap-4 group">
+             <div className="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100 text-emerald-500 group-hover:scale-110 transition-transform">
+               <CheckCircle className="w-4 h-4" />
+             </div>
+             <span className="text-slate-700 font-bold">Access exclusive enterprise projects</span>
+          </div>
+          <div className="flex items-center gap-4 group">
+             <div className="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100 text-emerald-500 group-hover:scale-110 transition-transform">
+               <CheckCircle className="w-4 h-4" />
+             </div>
+             <span className="text-slate-700 font-bold">AI-powered vetting & skill badges</span>
+          </div>
+          <div className="flex items-center gap-4 group">
+             <div className="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100 text-emerald-500 group-hover:scale-110 transition-transform">
+               <CheckCircle className="w-4 h-4" />
+             </div>
+             <span className="text-slate-700 font-bold">Industry-leading payout structures</span>
+          </div>
         </div>
       </div>
 
-      {/* Right side: Login Card */}
-      <div className="bg-white p-8 md:p-12 rounded-2xl shadow-xl border border-slate-200 max-w-md w-full text-center relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-400 to-amber-600"></div>
-        <div className="mb-8 flex justify-center">
-           <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center border border-slate-100 shadow-inner">
-              <span className="text-4xl">🚀</span>
-           </div>
-        </div>
+      {/* Login/Signup Card */}
+      <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-100 max-w-md w-full relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-slate-800 to-slate-900"></div>
         
-        <h2 className="text-2xl font-bold text-slate-900 mb-2">Associate Portal</h2>
-        <p className="text-slate-500 mb-8">Sign in to access your dashboard or start your application.</p>
+        <div className="mb-8">
+          <h2 className="text-2xl font-black text-slate-900 mb-1">
+            {isLogin ? "Associate Access" : "Join Network"}
+          </h2>
+          <p className="text-slate-500 text-sm font-bold">
+            {isLogin ? "Sign in to your expert portal" : "Create your associate profile"}
+          </p>
+        </div>
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg relative mb-6 flex items-center gap-3">
-            <AlertTriangle className="w-5 h-5"/> 
-            <span>{error}</span>
+          <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 animate-in shake duration-500">
+            <AlertTriangle className="w-5 h-5 shrink-0" />
+            <p className="text-sm font-bold">{error}</p>
           </div>
         )}
 
-        <button 
-          onClick={() => handleGoogleLogin('associate')}
-          className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-slate-900 text-white border border-transparent rounded-xl hover:bg-slate-800 hover:shadow-lg transition-all font-medium group"
-        >
-          <svg className="w-5 h-5 bg-white rounded-full p-0.5" viewBox="0 0 24 24">
-             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-             <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-             <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-             <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-          </svg>
-          <span className="group-hover:text-amber-400 transition-colors">Continue with Google</span>
-        </button>
+        <div className="space-y-5">
+          <button 
+            onClick={handleGoogleLogin}
+            className="w-full flex items-center justify-center gap-3 px-6 py-4 bg-white border-2 border-slate-100 rounded-2xl font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-200 transition-all duration-300 active:scale-[0.98]"
+          >
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
+            Continue with Google
+          </button>
 
-        <div className="mt-8 pt-6 border-t border-slate-100">
-          <p className="text-xs text-slate-400">
-            By continuing, you agree to solu AI's <a href="#" className="underline hover:text-amber-600">Terms of Service</a>.
-          </p>
+          <div className="relative py-2">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-100"></div>
+            </div>
+            <div className="relative flex justify-center text-[10px] uppercase">
+              <span className="bg-white px-4 text-slate-400 font-black tracking-[0.2em]">or use mail</span>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {!isLogin && (
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-slate-900 transition-colors">
+                  <User className="w-4 h-4" />
+                </div>
+                <input
+                  type="text"
+                  required
+                  className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-slate-900 focus:ring-4 focus:ring-slate-900/5 outline-none transition-all font-bold text-slate-700 placeholder:text-slate-400"
+                  placeholder="Full Name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+            )}
+
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-slate-900 transition-colors">
+                <Mail className="w-4 h-4" />
+              </div>
+              <input
+                type="email"
+                required
+                className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-slate-900 focus:ring-4 focus:ring-slate-900/5 outline-none transition-all font-bold text-slate-700 placeholder:text-slate-400"
+                placeholder="Email Address"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-400 group-focus-within:text-slate-900 transition-colors">
+                <Lock className="w-4 h-4" />
+              </div>
+              <input
+                type="password"
+                required
+                minLength={6}
+                className="w-full pl-11 pr-4 py-3.5 bg-slate-50 border-2 border-slate-50 rounded-2xl focus:bg-white focus:border-slate-900 focus:ring-4 focus:ring-slate-900/5 outline-none transition-all font-bold text-slate-700 placeholder:text-slate-400"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+
+            <button 
+              type="submit"
+              className="group w-full flex items-center justify-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold text-lg hover:bg-black shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-300 active:scale-[0.98] mt-2"
+            >
+              {isLogin ? "Enter Portal" : "Join Elite"}
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </form>
+
+          <div className="pt-6 text-center">
+            <button 
+              onClick={() => setIsLogin(!isLogin)}
+              className="text-slate-400 font-bold hover:text-slate-900 transition-colors text-xs uppercase tracking-widest"
+            >
+              {isLogin ? "Need an invitation? Apply now" : "Already an associate? Sign in"}
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-8 pt-6 border-t border-slate-50 text-center">
+           <p className="text-slate-400 text-xs font-bold uppercase tracking-wider">
+             Are you a business? <Link to="/business-login" className="text-amber-600 hover:text-amber-700 underline underline-offset-4 decoration-2">Client Portal</Link>
+           </p>
         </div>
       </div>
     </div>
