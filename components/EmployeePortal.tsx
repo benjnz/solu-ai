@@ -43,6 +43,41 @@ const EmployeePortal: React.FC<EmployeePortalProps> = ({ agent }) => {
     };
   }, [agent?.id]);
 
+  const [chatHistory, setChatHistory] = useState<any[]>([]);
+  const [isThinking, setIsThinking] = useState(false);
+
+  const handleSendMessage = async () => {
+    if (!message.trim() || !agent?.id || isThinking) return;
+    
+    const userMsg = { text: message, sender: 'user', timestamp: new Date() };
+    setChatHistory(prev => [...prev, userMsg]);
+    setMessage('');
+    setIsThinking(true);
+
+    try {
+      const { executeAgent } = await import('../services/agentService');
+      const result = await executeAgent(agent.id, message);
+      
+      const agentMsg = { 
+        text: result.output, 
+        sender: 'agent', 
+        timestamp: new Date(),
+        reasoning: result.agent_logs
+      };
+      
+      setChatHistory(prev => [...prev, agentMsg]);
+    } catch (error: any) {
+      setChatHistory(prev => [...prev, { 
+        text: "Neural bridge interrupted. Please try re-establishing the uplink.", 
+        sender: 'system', 
+        type: 'error',
+        timestamp: new Date() 
+      }]);
+    } finally {
+      setIsThinking(false);
+    }
+  };
+
   const themeColors: Record<string, string> = {
     indigo: '#6366f1',
     rose: '#f43f5e',
@@ -188,9 +223,57 @@ const EmployeePortal: React.FC<EmployeePortalProps> = ({ agent }) => {
                         {stats?.portalConfig?.welcomeMessage || "Hello! I am your autonomous partner for this department. How can we optimize our workflow today?"}
                       </p>
                     </div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Agent • Just Now</span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Agent • Initialized</span>
                   </div>
                 </div>
+
+                {chatHistory.map((chat, i) => (
+                  <div key={i} className={`flex gap-4 ${chat.sender === 'user' ? 'flex-row-reverse' : ''}`}>
+                    <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden ${chat.sender === 'user' ? 'bg-indigo-600' : 'bg-slate-900'}`}>
+                      {chat.sender === 'user' ? (
+                        <User className="w-6 h-6 text-white" />
+                      ) : avatarUrl ? (
+                        <img src={avatarUrl} alt="Agent" className="w-full h-full object-cover" />
+                      ) : (
+                        <Bot className="w-6 h-6 text-white" />
+                      )}
+                    </div>
+                    <div className={`space-y-2 ${chat.sender === 'user' ? 'items-end flex flex-col' : ''}`}>
+                      <div className={`p-6 rounded-3xl border max-w-lg ${chat.sender === 'user' ? 'bg-indigo-600 text-white border-indigo-500 rounded-tr-none' : 'bg-slate-50 text-slate-700 border-slate-100 rounded-tl-none'}`}>
+                        <p className="text-sm font-medium leading-relaxed">{chat.text}</p>
+                        {chat.reasoning && (
+                          <div className="mt-4 p-4 bg-black/5 rounded-2xl border border-black/5">
+                            <p className={`text-[10px] font-black uppercase tracking-widest mb-2 flex items-center gap-2 ${chat.sender === 'user' ? 'text-white/50' : 'text-indigo-400'}`}>
+                              <Brain className="w-3 h-3" /> Logic Path
+                            </p>
+                            <p className="text-[11px] font-serif italic line-clamp-3 opacity-80">{chat.reasoning}</p>
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest px-1">
+                        {chat.sender === 'user' ? 'You' : 'Agent'} • {chat.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+
+                {isThinking && (
+                  <div className="flex gap-4 animate-pulse">
+                    <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center">
+                      <Bot className="w-6 h-6 text-slate-300" />
+                    </div>
+                    <div className="space-y-2">
+                      <div className="bg-slate-50 px-6 py-4 rounded-3xl rounded-tl-none border border-slate-100 flex items-center gap-3">
+                         <div className="flex gap-1">
+                            <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                            <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                            <div className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce" />
+                         </div>
+                         <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Reasoning...</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="flex flex-col items-center justify-center pt-20 text-center opacity-20 pointer-events-none">
                   <MessageSquare className="w-16 h-16 text-slate-300 mb-4" />
@@ -205,12 +288,15 @@ const EmployeePortal: React.FC<EmployeePortalProps> = ({ agent }) => {
                     type="text" 
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                     placeholder="Provide context, request a task, or ask for analysis..."
                     className="w-full bg-white border border-slate-200 rounded-[2rem] px-8 py-5 pr-16 focus:outline-none focus:ring-4 focus:border-transparent shadow-sm transition-all font-medium text-sm"
                     style={{ '--tw-ring-color': `${themeHex}20` } as any}
                   />
                   <button 
-                    className="absolute right-3 top-3 bottom-3 aspect-square text-white rounded-full flex items-center justify-center hover:opacity-90 transition-all group-hover:scale-105 active:scale-95 shadow-lg shadow-slate-900/20"
+                    onClick={handleSendMessage}
+                    disabled={isThinking}
+                    className="absolute right-3 top-3 bottom-3 aspect-square text-white rounded-full flex items-center justify-center hover:opacity-90 transition-all group-hover:scale-105 active:scale-95 shadow-lg shadow-slate-900/20 disabled:opacity-50 disabled:scale-100"
                     style={{ backgroundColor: themeHex }}
                   >
                     <Send className="w-4 h-4 ml-0.5" />

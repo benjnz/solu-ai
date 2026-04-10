@@ -70,12 +70,12 @@ export const executeAgent = async (agentId: string, command: string, imageUrl?: 
   console.log(`DEBUG: Executing agent command for: ${agentId}`);
   
   try {
-    const response = await fetch(`${BACKEND_URL}/execute-agent?agent_id=${agentId}`, {
+    const response = await fetch(`${BACKEND_URL}/execute-agent`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ command, image_url: imageUrl })
+      body: JSON.stringify({ agent_id: agentId, command, image_url: imageUrl })
     });
 
 
@@ -114,8 +114,10 @@ export const testTool = async (toolId: string, config: any) => {
 
 export const startTelemetry = async (agentId: string) => {
   try {
-    const response = await fetch(`${BACKEND_URL}/agent/status?agent_id=${agentId}&status=active`, {
-      method: 'POST'
+    const response = await fetch(`${BACKEND_URL}/agent/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent_id: agentId, status: 'active' })
     });
     // This also acts as start-telemetry now as it initializes the status
     if (!response.ok) throw new Error("Failed to initialize telemetry");
@@ -128,8 +130,10 @@ export const startTelemetry = async (agentId: string) => {
 
 export const updateAgentBackendStatus = async (agentId: string, status: string) => {
   try {
-    const response = await fetch(`${BACKEND_URL}/agent/status?agent_id=${agentId}&status=${status}`, {
-      method: 'POST'
+    const response = await fetch(`${BACKEND_URL}/agent/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent_id: agentId, status })
     });
     if (!response.ok) throw new Error("Failed to update backend status");
     return await response.json();
@@ -154,8 +158,10 @@ export const deleteAgentBackend = async (agentId: string) => {
 
 export const renameAgentBackend = async (agentId: string, newName: string) => {
   try {
-    const response = await fetch(`${BACKEND_URL}/agent/rename?agent_id=${agentId}&new_name=${newName}`, {
-      method: 'POST'
+    const response = await fetch(`${BACKEND_URL}/agent/rename`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent_id: agentId, name: newName })
     });
     if (!response.ok) throw new Error("Failed to rename agent in backend");
     return await response.json();
