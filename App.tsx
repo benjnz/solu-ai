@@ -223,7 +223,7 @@ const AppContent: React.FC = () => {
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-amber-200">
       {/* Navbar */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center gap-8">
               <Link to="/" className="flex items-center gap-3 group shrink-0" onClick={() => setIsMobileMenuOpen(false)}>
@@ -233,18 +233,17 @@ const AppContent: React.FC = () => {
                 <span className="font-black text-xl tracking-tighter text-slate-900">solu<span className="text-amber-500">AI</span></span>
               </Link>
 
-              <div className="flex md:flex items-center gap-4">
-                <Link
-                  to="/how-it-works"
-                  className="text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors"
-                >
-                  How it works
-                </Link>
-              </div>
+              <Link
+                to="/how-it-works"
+                className="desktop-only text-sm font-bold text-slate-500 hover:text-slate-900 transition-colors"
+              >
+                How it works
+              </Link>
             </div>
 
             <div className="flex gap-4 items-center">
-              <div className="flex md:flex items-center gap-4">
+              {/* Desktop Actions */}
+              <div className="desktop-flex items-center gap-4">
                 <button
                   onClick={() => setIsToolOpen(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-amber-500/10 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-amber-500/20 hover:bg-amber-500/30 transition-all shadow-sm"
@@ -254,7 +253,7 @@ const AppContent: React.FC = () => {
 
                 {user ? (
                   <div className="flex items-center gap-4">
-                    <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-2 w-32 bg-slate-100 rounded-full overflow-hidden">
                       <div className="h-full w-2/3 bg-rose-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(244,63,94,0.3)]" />
                     </div>
                     <div className="flex items-center gap-2">
@@ -286,7 +285,7 @@ const AppContent: React.FC = () => {
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="md:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
+                className="mobile-only p-2 text-slate-600 hover:bg-slate-100 rounded-xl transition-all"
               >
                 {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -296,8 +295,14 @@ const AppContent: React.FC = () => {
 
         {/* Mobile menu drawer */}
         {isMobileMenuOpen && (
-          <div className="md:hidden fixed inset-0 z-40 bg-slate-900/10 backdrop-blur-md animate-in fade-in duration-300 overflow-hidden h-screen flex flex-col pt-16">
-            <div className="flex-1 bg-white p-6 space-y-8 animate-in slide-in-from-top-4 duration-300 shadow-2xl">
+          <div 
+            className="md:hidden fixed inset-0 z-40 animate-in fade-in duration-300 overflow-hidden h-screen flex flex-col pt-16"
+            onClick={() => setIsMobileMenuOpen(false)}
+          >
+            <div 
+              className="flex-1 bg-white p-6 space-y-8 animate-in slide-in-from-top-4 duration-300 shadow-xl border-t border-slate-100"
+              onClick={(e) => e.stopPropagation()}
+            >
               <div className="space-y-4">
                 <Link
                   to="/how-it-works"
@@ -366,9 +371,9 @@ const AppContent: React.FC = () => {
 
       {/* Global Mission Awareness Banner */}
       {(location.pathname.includes('client') || location.pathname.includes('associate') || location.pathname.includes('admin')) && (
-        <div className="bg-slate-900 border-b border-white/5 py-3 px-4 overflow-hidden relative group">
+        <div className="bg-slate-900 border-b border-white/5 py-3 px-3 relative group">
           <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-transparent to-rose-500/10 opacity-50" />
-          <div className="max-w-7xl mx-auto flex items-center justify-start md:justify-center gap-8 md:gap-12 relative text-white overflow-x-auto scrollbar-none py-1">
+          <div className="max-w-7xl mx-auto flex items-center justify-start lg:justify-center gap-4 md:gap-12 relative text-white overflow-x-auto scrollbar-none py-1">
             
             {user?.role === 'client' && user.companyDetails && (
               <>
@@ -376,7 +381,7 @@ const AppContent: React.FC = () => {
                   <ShieldCheck className="w-4 h-4 text-amber-500" />
                   <div className="flex flex-col">
                     <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-tight">Enterprise</span>
-                    <span className="text-[10px] md:text-xs font-black tracking-tighter truncate max-w-[100px] md:max-w-[120px] leading-tight">{user.companyDetails.name}</span>
+                    <span className="text-[10px] md:text-xs font-black tracking-tighter truncate max-w-[80px] sm:max-w-[120px] leading-tight">{user.companyDetails.name}</span>
                   </div>
                 </div>
                 <div className="h-6 w-px bg-white/10 shrink-0" />
@@ -384,7 +389,7 @@ const AppContent: React.FC = () => {
                   <Layers className="w-4 h-4 text-slate-400" />
                   <div className="flex flex-col">
                     <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-tight">Industry</span>
-                    <span className="text-[10px] md:text-xs font-black tracking-tighter leading-tight whitespace-nowrap">{user.companyDetails.industry}</span>
+                    <span className="text-[10px] md:text-xs font-black tracking-tighter leading-tight truncate max-w-[80px] sm:max-w-[120px]">{user.companyDetails.industry}</span>
                   </div>
                 </div>
                 <div className="h-6 w-px bg-white/10 shrink-0" />
@@ -446,7 +451,7 @@ const AppContent: React.FC = () => {
       )}
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 pt-24 md:pt-32 pb-12">
 
 
         <Routes>
@@ -534,14 +539,14 @@ const AppContent: React.FC = () => {
 
 const Home: React.FC<{ user: any; onOpenTool: () => void }> = ({ user, onOpenTool }) => {
   return (
-    <div className="w-full flex flex-col items-center space-y-16 py-12">
+    <div className="w-full flex flex-col items-center space-y-12 sm:space-y-16 pt-4 sm:pt-12 pb-12">
       <div className="flex flex-col items-center text-center max-w-4xl space-y-8 animate-in fade-in slide-in-from-top-10 duration-1000">
         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-500/10 text-amber-600 text-sm font-black uppercase tracking-widest border border-amber-500/20 mx-auto">
           <Zap className="w-4 h-4" /> The AI Readiness Engine
         </div>
-        <h1 className="text-6xl md:text-8xl font-black text-slate-900 tracking-tighter leading-[1.3] mb-8 pb-8">
+        <h1 className="text-5xl sm:text-7xl md:text-8xl font-black text-slate-900 tracking-tighter leading-[1.1] mb-4 pb-4">
           Turn Roles into <br />
-          <span className="text-amber-500 px-8 py-3 inline-block">Automations</span>
+          <span className="text-amber-500 px-4 sm:px-8 py-2 sm:py-3 inline-block">Automations</span>
         </h1>
         <p className="text-xl md:text-2xl text-slate-500 max-w-2xl mx-auto font-medium leading-relaxed">
           Input a job description to instantly generate a step-by-step technological architecture for automating any professional role.

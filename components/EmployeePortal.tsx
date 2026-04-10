@@ -244,7 +244,7 @@ const EmployeePortal: React.FC<EmployeePortalProps> = ({ agent }) => {
   return (
     <div className="min-h-screen bg-[#F4F7FA] text-slate-900 font-sans selection:bg-indigo-100 flex flex-col">
       <header className="bg-white/80 backdrop-blur-2xl border-b border-white/50 sticky top-0 z-50">
-        <div className="max-w-[1600px] mx-auto px-6 md:px-12 h-24 flex items-center justify-between">
+        <div className="max-w-[1600px] mx-auto px-3 sm:px-6 md:px-12 h-24 flex items-center justify-between">
           <div className="flex items-center gap-4 md:gap-6">
             <div className="w-10 h-10 md:w-14 h-14 bg-slate-900 rounded-xl md:rounded-[1.25rem] flex items-center justify-center shadow-2xl shadow-slate-400/20 overflow-hidden rotate-2 hover:rotate-0 transition-transform cursor-pointer">
               {avatarUrl ? (
@@ -253,14 +253,14 @@ const EmployeePortal: React.FC<EmployeePortalProps> = ({ agent }) => {
                 <Brain className="w-5 h-5 md:w-8 h-8 text-white" />
               )}
             </div>
-            <div className="min-w-0">
-              <h1 className="text-lg md:text-2xl font-black tracking-tighter text-slate-900 leading-tight uppercase italic truncate">{portalName}</h1>
+            <div className="min-w-0 max-w-[140px] sm:max-w-md">
+              <h1 className="text-base sm:text-lg md:text-2xl font-black tracking-tighter text-slate-900 leading-tight uppercase italic truncate">{portalName}</h1>
               <div className="flex items-center gap-2">
                 <div className="flex gap-0.5">
                    <div className="w-1 h-1 md:w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                    <div className="w-1 h-1 md:w-1.5 h-1.5 rounded-full bg-emerald-500/50" />
                 </div>
-                <span className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] truncate">{agent.blueprint?.jobTitle || 'Autonomous Node'}</span>
+                <span className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] truncate max-w-[100px] sm:max-w-[200px]">{agent.blueprint?.jobTitle || 'Autonomous Node'}</span>
               </div>
             </div>
           </div>
@@ -449,8 +449,8 @@ const EmployeePortal: React.FC<EmployeePortalProps> = ({ agent }) => {
                 </div>
 
                 {chatHistory.map((chat, i) => (
-                  <div key={i} className={`flex gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-[${i * 100}ms] ${chat.sender === 'user' ? 'flex-row-reverse' : ''}`}>
-                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden shadow-2xl relative group ${chat.sender === 'user' ? 'bg-indigo-600 shadow-indigo-500/20' : 'bg-slate-900 shadow-slate-900/20'}`}>
+                  <div key={i} className={`flex gap-3 md:gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-[${i * 100}ms] ${chat.sender === 'user' ? 'flex-row-reverse' : ''}`}>
+                    <div className={`w-10 h-10 md:w-14 h-14 rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 overflow-hidden shadow-xl lg:shadow-2xl relative group ${chat.sender === 'user' ? 'bg-indigo-600 shadow-indigo-500/20' : 'bg-slate-900 shadow-slate-900/20'}`}>
                       {chat.sender === 'user' ? (
                         <User className="w-8 h-8 text-white group-hover:scale-110 transition-transform" />
                       ) : avatarUrl ? (
@@ -461,24 +461,23 @@ const EmployeePortal: React.FC<EmployeePortalProps> = ({ agent }) => {
                       <div className="absolute inset-0 bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                     
-                    <div className={`space-y-3 max-w-2xl ${chat.sender === 'user' ? 'items-end flex flex-col' : 'items-start flex flex-col'}`}>
-                      <div className={`group relative p-8 rounded-[2.5rem] border shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition-all hover:shadow-[0_20px_40px_rgba(0,0,0,0.08)] ${
+                    <div className={`space-y-3 max-w-[85%] sm:max-w-2xl ${chat.sender === 'user' ? 'items-end flex flex-col' : 'items-start flex flex-col'}`}>
+                      <div className={`group relative p-5 md:p-8 rounded-2xl md:rounded-[2.5rem] border shadow-sm transition-all hover:shadow-md ${
                         chat.sender === 'user' 
                           ? 'bg-indigo-600 text-white border-indigo-500 rounded-tr-none' 
                           : 'bg-white text-slate-700 border-slate-100 rounded-tl-none'
                       }`}>
-                        <div className={`absolute top-0 ${chat.sender === 'user' ? 'right-0 -mr-2 bg-indigo-600' : 'left-0 -ml-2 bg-white'} w-4 h-4 rotate-45 border-t border-l border-inherit`} />
-                        <p className={`text-base font-medium leading-relaxed relative z-10 ${chat.sender === 'user' ? 'font-sans' : 'font-serif italic'}`}>{chat.text}</p>
+                        <p className={`text-sm md:text-base font-medium leading-relaxed relative z-10 ${chat.sender === 'user' ? 'font-sans' : 'font-serif'}`}>{chat.text}</p>
                         
                         {chat.reasoning && (
-                          <div className={`mt-8 p-6 rounded-[2rem] border overflow-hidden relative ${chat.sender === 'user' ? 'bg-black/20 border-white/10' : 'bg-slate-50 border-slate-200/50'}`}>
-                            <div className="absolute top-0 right-0 p-4 opacity-5">
-                              <Brain className="w-16 h-16" />
+                          <div className={`mt-5 md:mt-8 p-4 md:p-6 rounded-xl md:rounded-[2rem] border overflow-hidden relative shadow-inner ${chat.sender === 'user' ? 'bg-black/10 border-white/5' : 'bg-slate-50 border-slate-200/50'}`}>
+                            <div className="absolute top-0 right-0 p-4 opacity-[0.03] scale-150 rotate-12">
+                              <Brain className="w-24 h-24 md:w-32 h-32" />
                             </div>
-                            <p className={`text-[10px] font-black uppercase tracking-[0.3em] mb-4 flex items-center gap-3 ${chat.sender === 'user' ? 'text-white/60' : 'text-indigo-400'}`}>
-                              <Zap className="w-3.5 h-3.5 fill-current" /> Neural Trace Configuration
+                            <p className={`text-[8px] md:text-[9px] font-black uppercase tracking-[0.4em] mb-4 flex items-center gap-2 md:gap-3 ${chat.sender === 'user' ? 'text-white/40' : 'text-indigo-400/60'}`}>
+                              <span className="w-2 h-0.5 bg-current opacity-30" /> Neural Trace Configuration
                             </p>
-                            <p className={`text-[11px] font-mono leading-relaxed opacity-70 ${chat.sender === 'user' ? 'text-white' : 'text-slate-600'}`}>
+                            <p className={`text-[10px] md:text-xs font-mono leading-relaxed opacity-80 ${chat.sender === 'user' ? 'text-white/90' : 'text-slate-500'}`}>
                               {chat.reasoning}
                             </p>
                           </div>
@@ -498,18 +497,18 @@ const EmployeePortal: React.FC<EmployeePortalProps> = ({ agent }) => {
                 ))}
 
                 {isThinking && (
-                  <div className="flex gap-6 animate-pulse">
-                    <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center border border-slate-100">
-                      <Bot className="w-8 h-8 text-slate-300" />
+                  <div className="flex gap-3 md:gap-6 animate-pulse">
+                    <div className="w-10 h-10 md:w-14 h-14 rounded-xl md:rounded-2xl bg-white border border-slate-100 flex items-center justify-center shadow-sm">
+                      <div className="w-5 h-5 md:w-8 h-8 rounded-full bg-slate-100 animate-pulse" />
                     </div>
                     <div className="space-y-3">
-                      <div className="bg-slate-50/50 px-10 py-6 rounded-[2.5rem] rounded-tl-none border border-slate-100 flex items-center gap-4">
-                         <div className="flex gap-2">
-                            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                            <div className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce" />
+                      <div className="bg-white/60 backdrop-blur-md px-6 md:px-10 py-4 md:py-6 rounded-2xl md:rounded-[2.5rem] rounded-tl-none border border-slate-100 flex items-center gap-4">
+                         <div className="flex gap-1.5 md:gap-2">
+                            <div className="w-1.5 h-1.5 md:w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                            <div className="w-1.5 h-1.5 md:w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                            <div className="w-1.5 h-1.5 md:w-2 h-2 bg-indigo-500 rounded-full animate-bounce" />
                          </div>
-                         <p className="text-xs font-black text-slate-900 uppercase tracking-[0.4em] italic">Synthesizing Cognition...</p>
+                         <p className="text-[10px] md:text-xs font-black text-slate-400 uppercase tracking-[0.2em] md:tracking-[0.4em] italic mb-0">Agent Cognition...</p>
                       </div>
                     </div>
                   </div>
@@ -528,7 +527,7 @@ const EmployeePortal: React.FC<EmployeePortalProps> = ({ agent }) => {
                     onChange={(e) => setMessage(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
                     placeholder="Input directive..."
-                    className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl md:rounded-[3rem] px-6 md:px-12 py-4 md:py-7 pr-20 md:pr-24 focus:outline-none focus:ring-8 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-100 transition-all font-medium text-sm md:text-base shadow-inner placeholder:italic placeholder:text-slate-300"
+                    className="w-full bg-white border border-slate-200 rounded-2xl md:rounded-[3rem] px-6 md:px-12 py-4 md:py-8 pr-20 md:pr-24 focus:outline-none focus:ring-4 md:focus:ring-8 focus:ring-indigo-500/5 focus:bg-white focus:border-indigo-500/20 transition-all font-medium text-sm md:text-base shadow-sm focus:shadow-xl placeholder:italic placeholder:text-slate-300"
                   />
                   <button 
                     onClick={handleSendMessage}

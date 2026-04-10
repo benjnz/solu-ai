@@ -59,7 +59,7 @@ const StatCard = ({ title, value, change, icon, color }: any) => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
+    <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
       <div className="flex justify-between items-start mb-4">
         <div className={`p-3 rounded-2xl border ${colorClasses[color]}`}>{icon}</div>
         <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full uppercase tracking-tighter">{change}</span>
@@ -608,15 +608,15 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({
                           <div className="flex flex-col lg:flex-row justify-between items-start gap-4 lg:gap-6">
                             <div className="space-y-3 w-full">
                               <div className="flex flex-wrap items-center gap-2 md:gap-3">
-                                <span className="px-2 md:px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[8px] md:text-[10px] font-black tracking-widest uppercase border border-indigo-100">Session: {mid.slice(0, 12)}</span>
-                                <span className={`px-2 md:px-3 py-1 rounded-lg text-[8px] md:text-[10px] font-black tracking-widest uppercase ${missionLogs.some((l: any) => l.type === 'error') ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                                <span className="px-2 md:px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[7px] md:text-[10px] font-black tracking-widest uppercase border border-indigo-100">Session: {mid.slice(0, 10)}</span>
+                                <span className={`px-2 md:px-3 py-1 rounded-lg text-[7px] md:text-[10px] font-black tracking-widest uppercase ${missionLogs.some((l: any) => l.type === 'error') ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
                                   {missionLogs.some((l: any) => l.type === 'error') ? 'Errors' : 'Clean'}
                                 </span>
-                                <span className="px-2 md:px-3 py-1 bg-slate-50 text-slate-400 rounded-lg text-[8px] md:text-[10px] font-black uppercase tracking-widest border border-slate-100">
+                                <span className="px-2 md:px-3 py-1 bg-slate-50 text-slate-400 rounded-lg text-[7px] md:text-[10px] font-black uppercase tracking-widest border border-slate-100">
                                   {new Date(missionLogs[0].timestamp?.toDate?.() || Date.now()).toLocaleTimeString()}
                                 </span>
                               </div>
-                              <h4 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">{missionLogs[0].message.length > 80 ? missionLogs[0].message.substring(0, 80) + '...' : missionLogs[0].message}</h4>
+                              <h4 className="text-lg md:text-2xl font-black text-slate-900 leading-tight">{missionLogs[0].message.length > 60 ? missionLogs[0].message.substring(0, 60) + '...' : missionLogs[0].message}</h4>
                             </div>
                             <div className="flex grid grid-cols-2 lg:flex lg:flex-row items-center gap-4 w-full lg:w-auto">
                               <div className="flex flex-col items-end gap-1 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100 text-right w-full lg:w-32">

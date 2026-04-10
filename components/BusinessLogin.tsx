@@ -61,15 +61,15 @@ const BusinessLogin: React.FC = () => {
   }
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
-      <div className="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+    <div className="min-h-[80vh] flex items-center justify-center px-3 py-12">
+      <div className="max-w-5xl w-full grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
         
         {/* Left Side: Branding/Value Prop */}
-        <div className="hidden lg:block space-y-8 animate-in fade-in slide-in-from-left-8 duration-700">
+        <div className="hidden md:block space-y-8 animate-in fade-in slide-in-from-left-8 duration-700">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 text-amber-600 rounded-full text-sm font-bold tracking-wide uppercase">
             <Building2 className="w-4 h-4" /> Enterprise Access
           </div>
-          <h1 className="text-5xl font-extrabold text-slate-900 tracking-tight leading-tight uppercase italic">
+          <h1 className="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight uppercase italic">
             Scale with <br/>
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">Enterprise AI</span>
           </h1>

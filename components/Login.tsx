@@ -61,14 +61,14 @@ const Login: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col md:flex-row items-center justify-center min-h-screen px-6 py-8 md:py-12 gap-10 md:gap-12 lg:gap-24 animate-in fade-in slide-in-from-bottom-8 duration-700">
+    <div className="flex flex-col md:flex-row items-center justify-center min-h-screen px-3 sm:px-6 py-8 md:py-12 gap-10 md:gap-12 lg:gap-24 animate-in fade-in slide-in-from-bottom-8 duration-700">
       {/* Left Column: Associate Value Prop */}
       <div className="max-w-md space-y-6 md:space-y-8 text-center md:text-left">
         <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-amber-100 mx-auto md:mx-0">
            <Terminal className="w-3.5 h-3.5" /> Sovereign Network
         </div>
 
-        <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter leading-tight uppercase italic">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter leading-tight uppercase italic">
           Solu AI <br/>
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">Expert Agent</span>
         </h1>
@@ -76,7 +76,7 @@ const Login: React.FC = () => {
           Join the elite network of sovereign automation experts. Solve complex enterprise problems at scale.
         </p>
 
-        <div className="hidden md:block space-y-5 pt-4">
+        <div className="hidden sm:block space-y-5 pt-4">
           <div className="flex items-center gap-4 group">
              <div className="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100 text-emerald-500 group-hover:scale-110 transition-transform">
                <CheckCircle className="w-4 h-4" />

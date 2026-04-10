@@ -20,3 +20,27 @@
     background: none !important;
   }
 }
+
+/* Custom Responsive Utilities */
+.desktop-only, .desktop-flex {
+  display: none !important;
+}
+
+@media (min-width: 768px) {
+  .desktop-only {
+    display: block !important;
+  }
+  .desktop-flex {
+    display: flex !important;
+  }
+}
+
+.mobile-only {
+  display: block !important;
+}
+
+@media (min-width: 768px) {
+  .mobile-only {
+    display: none !important;
+  }
+}
