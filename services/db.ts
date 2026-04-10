@@ -275,9 +275,9 @@ export const updateAgentName = async (agentId: string, agentName: string): Promi
   }, { merge: true });
 };
 
-export const updateBuildRequestMeta = async (jobId: string, meta: { clientName?: string; contactName?: string; agentName?: string }): Promise<void> => {
+export const updateBuildRequestMeta = async (jobId: string, meta: { clientName?: string; contactName?: string; agentName?: string; notificationEmail?: string }): Promise<void> => {
   const docRef = doc(db, 'build_requests', jobId);
-  await setDoc(docRef, meta, { merge: true });
+  await setDoc(docRef, sanitizeData(meta), { merge: true });
 };
 
 export const getAgentLogs = (agentId: string, callback: (logs: any[]) => void) => {

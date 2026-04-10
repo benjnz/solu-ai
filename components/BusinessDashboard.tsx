@@ -59,14 +59,16 @@ const StatCard = ({ title, value, change, icon, color }: any) => {
   };
 
   return (
-    <div className="bg-white p-4 sm:p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all group">
-      <div className="flex justify-between items-start mb-4">
-        <div className={`p-3 rounded-2xl border ${colorClasses[color]}`}>{icon}</div>
-        <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full uppercase tracking-tighter">{change}</span>
+    <div className="bg-white p-3 md:p-6 rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all group flex flex-col justify-between">
+      <div className="flex justify-between items-start mb-2 md:mb-4">
+        <div className={`p-2 md:p-3 rounded-lg md:rounded-2xl border ${colorClasses[color]}`}>
+          {React.cloneElement(icon as React.ReactElement, { className: 'w-4 h-4 md:w-5 h-5' })}
+        </div>
+        <span className="text-[8px] md:text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 md:py-1 rounded-full uppercase tracking-tighter">{change}</span>
       </div>
       <div>
-        <p className="text-[10px] font-black text-slate-400 mb-1 uppercase tracking-widest">{title}</p>
-        <p className="text-2xl font-black text-slate-900 leading-none">{value}</p>
+        <p className="text-[8px] md:text-[10px] font-black text-slate-400 mb-0.5 md:mb-1 uppercase tracking-widest truncate">{title}</p>
+        <p className="text-lg md:text-2xl font-black text-slate-900 leading-none">{value}</p>
       </div>
     </div>
   );
@@ -439,44 +441,41 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({
         
         {/* Header (Now part of the blurred content) */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
-          <div>
+          <div className="hidden md:block">
             <div className="flex items-center gap-3 mb-2 font-black">
               <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-tight">Agent Management Console</h2>
             </div>
             <p className="text-slate-400 font-bold text-xs tracking-widest uppercase italic">Executive Control Dashboard</p>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-2 md:gap-4 w-full lg:w-auto">
             <button
               onClick={() => setShowThinking(!showThinking)}
-              className={`px-5 py-2 rounded-2xl border text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${showThinking ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}
+              className={`px-3 md:px-5 py-2 rounded-2xl border text-[9px] md:text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all ${showThinking ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-slate-50 text-slate-400 border-slate-100'}`}
             >
               <Brain className={`w-3 h-3 ${showThinking ? 'animate-pulse' : ''}`} />
-              Step-by-step logic: {showThinking ? 'Visible' : 'Hidden'}
+              <span className="hidden sm:inline">Step-by-step logic:</span> {showThinking ? 'Visible' : 'Hidden'}
             </button>
-            <div className={`px-5 py-2 rounded-2xl border text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${isPaused ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+            <div className={`px-3 md:px-5 py-2 rounded-2xl border text-[9px] md:text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${isPaused ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
               <span className={`w-2 h-2 rounded-full ${isPaused ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500'}`}></span>
-              {isPaused ? 'AGENT_PAUSED' : 'NETWORK_ONLINE'}
+              {isPaused ? 'PAUSED' : 'ONLINE'}
             </div>
             {isDeployed && agentId && (
               <button 
                 onClick={async () => {
                   const nextStatus = isPaused ? 'Active' : 'Paused';
-                  console.log(`DEBUG: Optimistic update to ${nextStatus}`);
                   setLocalStatus(nextStatus);
-                  
                   try {
                     await updateAgentStatus(agentId, nextStatus as any);
                     await updateAgentBackendStatus(agentId, nextStatus as any);
                   } catch (e) {
-                    console.error("ERROR: Status toggle failed:", e);
-                    setLocalStatus(stats?.status || 'Active'); // Revert
+                    setLocalStatus(stats?.status || 'Active');
                   }
                 }}
-                className={`flex items-center gap-3 px-6 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all ${isPaused ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                className={`flex items-center gap-2 md:gap-3 px-4 md:px-6 py-2 md:py-3 rounded-2xl font-black text-[9px] md:text-[10px] uppercase tracking-widest transition-all ${isPaused ? 'bg-amber-600 text-white shadow-lg shadow-amber-600/20' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
               >
-                {isPaused ? <Play className="w-3.5 h-3.5 fill-current" /> : <Pause className="w-3.5 h-3.5 fill-current" />}
-                {isPaused ? 'Resume Agent' : 'Pause Agent'}
+                {isPaused ? <Play className="w-3 h-3 md:w-3.5 h-3.5 fill-current" /> : <Pause className="w-3 h-3 md:w-3.5 h-3.5 fill-current" />}
+                {isPaused ? 'Resume' : 'Pause'}
               </button>
             )}
           </div>
@@ -485,65 +484,57 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({
         <div className="relative">
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-6">
           <StatCard title="Total Tasks Computed" value={activeTasksCount.toFixed(0)} change="Real-time" icon={<Cpu className="w-5 h-5" />} color="indigo" />
           <StatCard title="Accuracy & Compliance" value={accuracyRate} change="Real-time" icon={<ShieldCheck className="w-5 h-5" />} color="emerald" />
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm transition-all group relative overflow-hidden">
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-3 rounded-2xl border bg-amber-50 text-amber-600 border-amber-100"><Zap className="w-5 h-5" /></div>
-              <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full uppercase tracking-tighter">Live Allocation</span>
+          <div className="bg-white p-3 md:p-6 rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm transition-all group relative overflow-hidden flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-2 md:mb-4">
+              <div className="p-2 md:p-3 rounded-lg md:rounded-2xl border bg-amber-50 text-amber-600 border-amber-100"><Zap className="w-4 h-4 md:w-5 h-5" /></div>
+              <span className="hidden md:inline-block text-[10px] font-black text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full uppercase tracking-tighter">Live Allocation</span>
             </div>
-            <div className="space-y-4">
+            <div className="space-y-2 md:space-y-4">
               <div>
-                <p className="text-[10px] font-black text-slate-400 mb-2 uppercase tracking-widest">Resource Allocation</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-2xl font-black text-slate-900 leading-none">${totalCost.toFixed(3)}</p>
-                  <p className="text-[10px] font-black text-slate-400 uppercase">/ ${config.budget?.dailyLimitUSD || 10.00}</p>
+                <p className="text-[8px] md:text-[10px] font-black text-slate-400 mb-0.5 md:mb-2 uppercase tracking-widest">Resource Allocation</p>
+                <div className="flex items-baseline gap-1 md:gap-2">
+                  <p className="text-lg md:text-2xl font-black text-slate-900 leading-none">${totalCost.toFixed(2)}</p>
+                  <p className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase">/ ${config.budget?.dailyLimitUSD || 10}</p>
                 </div>
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
                   <div
                     className={`h-full transition-all duration-1000 rounded-full ${(totalCost / (config.budget?.dailyLimitUSD || 10)) > 0.8 ? 'bg-rose-500' : 'bg-amber-500'}`}
                     style={{ width: `${Math.min(100, (totalCost / (config.budget?.dailyLimitUSD || 10)) * 100)}%` }}
                   />
                 </div>
-                <p className="text-[8px] font-black uppercase tracking-widest text-slate-400">Budget Utilization</p>
               </div>
             </div>
           </div>
           <StatCard title="Average Latency" value={stats?.lastLatency ? `${stats.lastLatency}ms` : "N/A"} change="API Measured" icon={<Activity className="w-5 h-5" />} color="purple" />
 
-          <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm transition-all group">
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-3 rounded-2xl border bg-indigo-50 text-indigo-600 border-indigo-100"><ShieldCheck className="w-5 h-5" /></div>
+          <div className="bg-white p-3 md:p-6 rounded-2xl md:rounded-3xl border border-slate-200 shadow-sm transition-all group flex flex-col justify-between">
+            <div className="flex justify-between items-start mb-2 md:mb-4">
+              <div className="p-2 md:p-3 rounded-lg md:rounded-2xl border bg-indigo-50 text-indigo-600 border-indigo-100"><ShieldCheck className="w-4 h-4 md:w-5 h-5" /></div>
             </div>
-            <div className="space-y-1">
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">System Health Score</p>
-              <p className="text-2xl font-black text-slate-900">{stats?.trust_score ? `${stats.trust_score}%` : "100%"}</p>
-              <p className="text-[9px] font-black text-emerald-600 uppercase tracking-tighter">Governance: Active</p>
+            <div className="space-y-0.5 md:space-y-1">
+              <p className="text-[8px] md:text-[10px] font-black text-slate-400 uppercase tracking-widest truncate">System Health</p>
+              <p className="text-lg md:text-2xl font-black text-slate-900">{stats?.trust_score ? `${stats.trust_score}%` : "100%"}</p>
             </div>
           </div>
 
 
           {/* Industrial Circuit Status */}
-          <div className={`p-6 rounded-3xl border transition-all duration-700 ${(stats?.tool_errors || 0) >= 3 ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100 shadow-sm'}`}>
-            <div className="flex justify-between items-center mb-4">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">System Integrity</p>
-              <div className={`w-2 h-2 rounded-full ${(stats?.tool_errors || 0) >= 3 ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`} />
+          <div className={`p-3 md:p-6 rounded-2xl md:rounded-3xl border transition-all duration-700 flex flex-col justify-between ${(stats?.tool_errors || 0) >= 3 ? 'bg-rose-50 border-rose-100' : 'bg-emerald-50 border-emerald-100 shadow-sm'}`}>
+            <div className="flex justify-between items-center mb-2 md:mb-4">
+              <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-slate-400">Integrity</p>
+              <div className={`w-1.5 h-1.5 md:w-2 h-2 rounded-full ${(stats?.tool_errors || 0) >= 3 ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`} />
             </div>
-            <div className="space-y-1">
-              <p className={`text-sm font-black uppercase tracking-tighter ${stats?.status === 'Paused' ? 'text-amber-600' : ((stats?.tool_errors || 0) >= 3 ? 'text-rose-600' : 'text-emerald-600')}`}>
-                {stats?.status === 'Paused' ? "System Idle (Paused)" : ((stats?.tool_errors || 0) >= 3 ? "Action Required" : "System Secure")}
+            <div className="space-y-0.5 md:space-y-1">
+              <p className={`text-[11px] md:text-sm font-black uppercase tracking-tighter truncate ${stats?.status === 'Paused' ? 'text-amber-600' : ((stats?.tool_errors || 0) >= 3 ? 'text-rose-600' : 'text-emerald-600')}`}>
+                {stats?.status === 'Paused' ? "System Idle" : ((stats?.tool_errors || 0) >= 3 ? "Action Req." : "Secure")}
               </p>
-              {stats?.status === 'Paused' ? (
-                <p className="text-[9px] font-black text-amber-500 uppercase">Operational Hold Active</p>
-              ) : (stats?.tool_errors || 0) >= 3 && (
-                <p className="text-[9px] font-black text-indigo-500 uppercase">Self-Correction Active</p>
-              )}
             </div>
           </div>
-
 
         </div>
 
@@ -552,15 +543,17 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({
           {/* Central Analytics */}
           <div className="lg:col-span-8 space-y-8">
             <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-200 min-h-[460px]">
-              <div className="flex justify-between items-center mb-10">
-                <h3 className="text-sm font-black text-slate-900 flex items-center gap-3 tracking-[0.2em] uppercase">
-                  {activeTab === 'analytics' && <><BarChart3 className="w-5 h-5 text-indigo-600" /> Automation Logs & Activity</>}
-                  {activeTab === 'strategy' && <><Settings className="w-5 h-5 text-amber-600" /> Agent Core Instructions</>}
-                  {activeTab === 'controls' && <><Lock className="w-5 h-5 text-rose-600" /> Agent Permissions</>}
-                  {activeTab === 'approvals' && <><CheckCircle className="w-5 h-5 text-emerald-600" /> Approvals</>}
-                  {activeTab === 'portal' && <><Globe className="w-5 h-5 text-indigo-500" /> Employee Portal Settings</> }
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
+                <h3 className="text-[10px] md:text-sm font-black text-slate-900 flex items-center gap-3 tracking-[0.2em] uppercase whitespace-nowrap overflow-hidden">
+                  <span className="truncate">
+                    {activeTab === 'analytics' && <><BarChart3 className="w-4 h-4 md:w-5 h-5 text-indigo-600 inline mr-2" /> Logs & Activity</>}
+                    {activeTab === 'strategy' && <><Settings className="w-4 h-4 md:w-5 h-5 text-amber-600 inline mr-2" /> Core Instructions</>}
+                    {activeTab === 'controls' && <><Lock className="w-4 h-4 md:w-5 h-5 text-rose-600 inline mr-2" /> Permissions</>}
+                    {activeTab === 'approvals' && <><CheckCircle className="w-4 h-4 md:w-5 h-5 text-emerald-600 inline mr-2" /> Approvals</>}
+                    {activeTab === 'portal' && <><Globe className="w-4 h-4 md:w-5 h-5 text-indigo-500 inline mr-2" /> Interface</> }
+                  </span>
                 </h3>
-                <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 overflow-x-auto scrollbar-none max-w-full">
+                <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 overflow-x-auto scrollbar-none w-full sm:w-auto shrink-0">
                   {[
                     { id: 'analytics', label: 'Activity' },
                     { id: 'strategy', label: 'Instructions' },
@@ -571,7 +564,7 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`px-4 md:px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                      className={`px-4 md:px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex-1 sm:flex-none ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-sm border border-slate-200/50' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                       {tab.label}
                     </button>
@@ -914,35 +907,35 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({
                       />
                     </div>
 
-                    <div className="flex items-center justify-between p-6 bg-white border border-slate-100 rounded-3xl group shadow-sm">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 md:p-6 bg-white border border-slate-100 rounded-3xl group shadow-sm gap-4">
                       <div className="space-y-1">
-                        <p className="font-black text-slate-900 uppercase tracking-wider text-xs italic">Public Portal Access</p>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Allow access without enterprise SSO.</p>
+                        <p className="font-black text-slate-900 uppercase tracking-wider text-[10px] md:text-xs italic">Public Portal Access</p>
+                        <p className="text-[9px] md:text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-tight">Allow access without enterprise SSO.</p>
                       </div>
                       <button
                         onClick={() => setPortalConfig({...portalConfig, isPublic: !portalConfig.isPublic})}
-                        className={`w-14 h-8 rounded-full p-1.5 transition-all duration-300 ${portalConfig.isPublic ? 'bg-indigo-600 shadow-lg shadow-indigo-200' : 'bg-slate-200'}`}
+                        className={`w-12 h-7 md:w-14 md:h-8 rounded-full p-1 transition-all duration-300 shrink-0 ${portalConfig.isPublic ? 'bg-indigo-600 shadow-lg shadow-indigo-200' : 'bg-slate-200'}`}
                       >
-                        <div className={`w-5 h-5 bg-white rounded-full transition-transform duration-300 ${portalConfig.isPublic ? 'translate-x-6' : 'translate-x-0'}`} />
+                        <div className={`w-5 h-5 bg-white rounded-full transition-transform duration-300 ${portalConfig.isPublic ? 'translate-x-5 md:translate-x-6' : 'translate-x-0'}`} />
                       </button>
                     </div>
 
                     {/* Live URL Preview */}
                     {portalConfig.subdomain && (
-                      <div className={`p-5 rounded-3xl border flex items-center justify-between gap-4 transition-all duration-500 ${
+                      <div className={`p-4 md:p-5 rounded-3xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 transition-all duration-500 ${
                         portalSaveStatus === 'saved' 
                           ? 'bg-emerald-50 border-emerald-200' 
                           : 'bg-indigo-50 border-indigo-100'
                       }`}>
-                        <div className="flex items-center gap-3 min-w-0">
+                        <div className="flex items-center gap-3 min-w-0 w-full sm:w-auto">
                           <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${
                             portalSaveStatus === 'saved' ? 'bg-emerald-500' : 'bg-indigo-300 animate-pulse'
                           }`} />
                           <div className="min-w-0">
-                            <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                            <p className="text-[8px] md:text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
                               {portalSaveStatus === 'saved' ? 'Portal Live At' : 'Portal URL Preview'}
                             </p>
-                            <p className={`text-sm font-black truncate ${portalSaveStatus === 'saved' ? 'text-emerald-700' : 'text-indigo-600'}`}>
+                            <p className={`text-xs md:text-sm font-black truncate ${portalSaveStatus === 'saved' ? 'text-emerald-700' : 'text-indigo-600'}`}>
                               {portalConfig.subdomain}.solu.uk
                             </p>
                           </div>

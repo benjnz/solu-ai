@@ -19,6 +19,10 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ onPostJob, onOpenTool
   const { user } = useUser();
   const [isDeployed, setIsDeployed] = useState(false);
   const [isProvisioning, setIsProvisioning] = useState(false);
+  const [isAwaitingDeployment, setIsAwaitingDeployment] = useState(false);
+  const [pendingJob, setPendingJob] = useState<JobPost | null>(null);
+  const [notificationEmail, setNotificationEmail] = useState('');
+  const [emailStatus, setEmailStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [view, setView] = useState<'dashboard' | 'blueprint'>('dashboard');
   const [blueprint, setBlueprint] = useState<Blueprint | null>(null);
   const location = useLocation();
@@ -101,13 +105,30 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ onPostJob, onOpenTool
       if (user?.companyDetails) {
         newJob.companyDetails = user.companyDetails;
       }
-      await createBuildRequest(newJob);
-      setShowApprovalSuccess(true);
-      setTimeout(() => setShowApprovalSuccess(false), 5000);
+      await createBuildRequest({
+        ...newJob,
+        status: 'Awaiting Deployment'
+      });
+      setIsAwaitingDeployment(true);
+      setPendingJob(newJob);
+      setView('dashboard');
     } catch (e: any) {
       alert(`Approval failed: ${e.message}`);
     } finally {
       setIsApproving(false);
+    }
+  };
+
+  const handleSaveEmail = async () => {
+    if (!pendingJob?.id || !notificationEmail) return;
+    setEmailStatus('saving');
+    try {
+      const { updateBuildRequestMeta } = await import('../services/db');
+      await updateBuildRequestMeta(pendingJob.id, { notificationEmail });
+      setEmailStatus('saved');
+    } catch (e) {
+      console.error("Failed to save notification email:", e);
+      setEmailStatus('idle');
     }
   };
 
@@ -134,7 +155,20 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ onPostJob, onOpenTool
          setBlueprint(activeAgent.blueprint);
       }
     } else {
-      const myProvisioning = myJobs.find(j => j.status !== 'Deployed' && j.status !== 'Completed');
+      const awaitingJob = myJobs.find(j => j.status === 'Awaiting Deployment');
+      if (awaitingJob) {
+        setIsAwaitingDeployment(true);
+        setPendingJob(awaitingJob);
+        if (awaitingJob.notificationEmail && !notificationEmail) {
+          setNotificationEmail(awaitingJob.notificationEmail);
+          setEmailStatus('saved');
+        }
+      } else {
+        setIsAwaitingDeployment(false);
+        setPendingJob(null);
+      }
+
+      const myProvisioning = myJobs.find(j => j.status !== 'Deployed' && j.status !== 'Completed' && j.status !== 'Awaiting Deployment');
       if (myProvisioning) {
         setIsProvisioning(true);
         setIsDeployed(false);

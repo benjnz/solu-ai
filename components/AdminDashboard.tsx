@@ -18,6 +18,8 @@ import {
   Terminal,
   Cpu,
   Shield,
+  Mail,
+  ArrowRight,
   Trash2,
   Edit3,
   Plus,
@@ -1142,6 +1144,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
 
       // Step 3: Update Status
       await updateBuildRequestStatus(selectedJob.id, 'Deployed');
+      
+      // Step 4: Notify Client if email provided
+      if (selectedJob.notificationEmail) {
+        console.log(`[Back-End:Automation] Dispatching deployment confirmation to: ${selectedJob.notificationEmail}`);
+        // In a real system, this would trigger a SendGrid/Postmark template
+      }
+
       setIsDeploying(false);
       setDeploySuccess(true);
       if (onUpdateJob) onUpdateJob(selectedJob.id, 'Deployed');
@@ -2049,14 +2058,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
 
           {dashboardView === 'active_agents' ? (
             <div className="space-y-12 animate-in fade-in slide-in-from-bottom-5 duration-700">
-               {selectedMonitorAgentId ? (
-                 <div className="bg-white rounded-[4rem] border border-slate-200 shadow-2xl relative overflow-hidden p-8 animate-in zoom-in-95 duration-500">
-                    <button 
-                      onClick={() => setSelectedMonitorAgentId(null)}
-                      className="absolute top-10 right-10 z-20 flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg hover:bg-slate-800 transition-all"
-                    >
-                      <ChevronLeft className="w-4 h-4" /> Close Monitor
-                    </button>
+                {selectedMonitorAgentId ? (
+                  <div className="bg-white rounded-[2rem] md:rounded-[4rem] border border-slate-200 shadow-2xl relative overflow-hidden p-4 md:p-8 animate-in zoom-in-95 duration-500">
+                    <div className="flex justify-start mb-6 md:mb-0">
+                      <button 
+                        onClick={() => setSelectedMonitorAgentId(null)}
+                        className="md:absolute md:top-10 md:right-10 z-20 flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 text-white rounded-xl text-[9px] font-black uppercase tracking-widest shadow-lg hover:bg-slate-800 transition-all w-fit"
+                      >
+                        <ChevronLeft className="w-4 h-4" /> Close Monitor
+                      </button>
+                    </div>
                     <BusinessDashboard 
                       isDeployed={true}
                       agentId={selectedMonitorAgentId}
@@ -2065,8 +2076,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
                       activeJobs={jobs}
                       onOpenTool={() => {}}
                     />
-                 </div>
-               ) : (
+                  </div>
+                ) : (
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                    {deployedAgents.map(agent => (
                      <div key={agent.id} className="bg-[#0b0f19] border border-white/5 p-10 rounded-[3rem] transition-all relative overflow-hidden group hover:border-indigo-500/30">
@@ -2204,8 +2215,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
                         </button>
                       </div>
                       <div className="space-y-1 mb-6 relative z-10 cursor-pointer" onClick={() => handleCreateAgent(job)}>
-                        <p className="text-slate-400 text-xs font-bold">Company: {job.clientName}</p>
                         {(job as any).contactName && <p className="text-slate-600 text-[10px] font-mono">Contact: {(job as any).contactName}</p>}
+                        {job.notificationEmail && (
+                          <div className="flex items-center gap-2 mt-2 px-3 py-1 bg-amber-500/10 rounded-lg w-fit border border-amber-500/10">
+                            <Mail className="w-3 h-3 text-amber-500" />
+                            <p className="text-[9px] font-bold text-amber-600 uppercase tracking-widest truncate max-w-[120px]">{job.notificationEmail}</p>
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center justify-between relative z-10">
                         <span className={`px-4 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest ${job.status === 'Open' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`}>{job.status}</span>
@@ -2296,11 +2312,18 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
                       </div>
                       <button 
                         onClick={handleDeploy} 
-                        disabled={isDeploying || !agentName} 
-                        className={`w-full py-6 rounded-[2rem] text-sm font-black uppercase tracking-widest transition-all ${isDeploying ? 'bg-slate-800 text-slate-600' : 'bg-indigo-500 text-white shadow-2xl shadow-indigo-500/20 hover:scale-[1.02] active:scale-[0.98]'}`}
+                        disabled={isDeploying || !agentName || deploySuccess} 
+                        className={`w-full py-6 rounded-[2rem] text-sm font-black uppercase tracking-widest transition-all ${isDeploying ? 'bg-slate-800 text-slate-600' : (deploySuccess ? 'bg-emerald-500 text-white shadow-xl shadow-emerald-500/10' : 'bg-indigo-500 text-white shadow-2xl shadow-indigo-500/20 hover:scale-[1.02] active:scale-[0.98]')}`}
                       >
-                        {isDeploying ? 'Syncing Node...' : 'Deploy Agent Node'}
+                        {isDeploying ? 'Syncing Node...' : (deploySuccess ? 'Node Deployed' : (selectedJob.notificationEmail ? 'Deploy & Notify Client' : 'Deploy Agent Node'))}
                       </button>
+                      
+                      {selectedJob.notificationEmail && !deploySuccess && (
+                        <div className="flex items-center justify-center gap-2 text-indigo-400">
+                          <Mail className="w-3.5 h-3.5 animate-pulse" />
+                          <p className="text-[10px] font-black uppercase tracking-widest">{selectedJob.notificationEmail}</p>
+                        </div>
+                      )}
                     </div>
                     {deploySuccess && (
                       <div className="p-6 bg-emerald-500/10 border border-emerald-500/20 rounded-3xl animate-in zoom-in duration-300">

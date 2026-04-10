@@ -4,6 +4,7 @@ import { generateBlueprintFromJobDescription } from '../services/geminiService';
 import { Blueprint } from '../types';
 import { useUser } from '../contexts/UserContext';
 import { BrainCircuit, FileText, Zap, Loader2, Building2, User, Bot, ArrowRight, ArrowLeft } from 'lucide-react';
+import SetupTutorial from './SetupTutorial';
 
 interface InstantToolProps {
   variant?: 'full' | 'compact' | 'advanced';
@@ -206,6 +207,7 @@ const InstantTool: React.FC<InstantToolProps> = ({ variant = 'full', onSuccess }
           </div>
         )}
       </div>
+      {(variant === 'full' || variant === 'advanced') && <SetupTutorial />}
     </div>
   );
 };

@@ -38,7 +38,8 @@ export interface JobPost {
     esg_focus?: string;
   };
   blueprint: Blueprint;
-  status: 'Open' | 'In Progress' | 'Deployed' | 'Completed' | 'open' | 'in-progress' | 'completed';
+  status: 'Open' | 'In Progress' | 'Deployed' | 'Completed' | 'open' | 'in-progress' | 'completed' | 'Awaiting Deployment';
+  notificationEmail?: string;
   postedDate: string;
   budgetRange?: string;
   bidsCount?: number;
