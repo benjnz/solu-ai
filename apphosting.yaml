@@ -1,0 +1,16 @@
+# Settings for Unified Deployment (Frontend + Backend).
+# See https://firebase.google.com/docs/app-hosting/configure#cloud-run
+runConfig:
+  minInstances: 0
+  memoryMiB: 2048
+  # cpu: 1
+
+# Environment variables and secrets.
+env:
+  - variable: GEMINI_API_KEY
+    secret: GEMINI_API_KEY
+
+  # Grant access to secrets in Cloud Secret Manager.
+  # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
+  # - variable: MY_SECRET
+  #   secret: mySecretRef

@@ -169,12 +169,14 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'analytics' | 'monitoring' | 'controls' | 'approvals' | 'strategy' | 'portal'>('analytics');
   const [portalConfig, setPortalConfig] = useState({
-    subdomain: '',
-    portalName: '',
     welcomeMessage: '',
-    isPublic: true
+    isPublic: true,
+    authorizedEmails: [] as string[],
+    authorizedDomains: [] as string[]
   });
   const [portalSaveStatus, setPortalSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [domInput, setDomInput] = useState('');
+  const [emailInput, setEmailInput] = useState('');
   const [logs, setLogs] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [localStatus, setLocalStatus] = useState<string | null>(null);
@@ -194,6 +196,8 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({
   useEffect(() => {
     if (stats?.portalConfig && hasInitializedPortal.current !== agentId) {
       setPortalConfig(stats.portalConfig);
+      setDomInput(stats.portalConfig.authorizedDomains?.join(', ') || '');
+      setEmailInput(stats.portalConfig.authorizedEmails?.join('\n') || '');
       hasInitializedPortal.current = agentId;
     }
   }, [stats?.portalConfig, agentId]);
@@ -205,14 +209,26 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({
       setTimeout(() => setPortalSaveStatus('idle'), 3000);
       return;
     }
+
+    // Parse buffered inputs
+    const authorizedDomains = domInput.split(',').map(d => d.trim().toLowerCase()).filter(d => !!d);
+    const authorizedEmails = emailInput.split(/[\n,]/).map(em => em.trim().toLowerCase()).filter(em => !!em);
+    
+    const finalConfig = {
+      ...portalConfig,
+      authorizedDomains,
+      authorizedEmails
+    };
+
     setPortalSaveStatus('saving');
-    console.log(`[Business:Update] Saving portal config for ${agentId}:`, portalConfig);
+    console.log(`[Business:Update] Saving portal config for ${agentId}:`, finalConfig);
     try {
       await updateAgentPortalConfig(agentId, {
-        ...portalConfig,
+        ...finalConfig,
         deployedAt: new Date().toISOString(),
         liveUrl: `https://${portalConfig.subdomain}.${CONFIG.BASE_DOMAIN}`
       });
+      setPortalConfig(finalConfig);
       setPortalSaveStatus('saved');
       setTimeout(() => setPortalSaveStatus('idle'), 4000);
     } catch (error) {
@@ -798,7 +814,54 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({
                         </div>
                         <p className="text-[10px] text-slate-400 font-medium italic">Employees will access the agent core via this custom URL.</p>
                       </div>
+
+                      <div className="space-y-4">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Access Security</label>
+                        <div className="flex bg-white p-1 rounded-2xl border border-slate-200 w-fit">
+                          <button 
+                            onClick={() => setPortalConfig({...portalConfig, isPublic: true})}
+                            className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${portalConfig.isPublic ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-500 hover:text-slate-700'}`}
+                          >
+                            Public
+                          </button>
+                          <button 
+                            onClick={() => setPortalConfig({...portalConfig, isPublic: false})}
+                            className={`px-6 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${!portalConfig.isPublic ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-700'}`}
+                          >
+                            Authorized Only
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-medium italic">
+                          {portalConfig.isPublic ? 'Anyone with the link can access the portal.' : 'Only Google-authenticated users from whitelisted domains or emails can access.'}
+                        </p>
+                      </div>
                     </div>
+
+                    {!portalConfig.isPublic && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 pt-6 animate-in fade-in slide-in-from-top-4 duration-500">
+                        <div className="space-y-4">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Whitelisted Domains</label>
+                          <input 
+                            type="text" 
+                            value={domInput}
+                            onChange={(e) => setDomInput(e.target.value)}
+                            placeholder="e.g. google.com, apple.com"
+                            className="bg-white border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all w-full shadow-sm"
+                          />
+                          <p className="text-[10px] text-slate-400 font-medium italic">Comma-separated list of authorized domains.</p>
+                        </div>
+                        <div className="space-y-4">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Individual Whitelist</label>
+                          <textarea 
+                            value={emailInput}
+                            onChange={(e) => setEmailInput(e.target.value)}
+                            placeholder="user@example.com (one per line)"
+                            className="bg-white border border-slate-200 rounded-2xl px-6 py-4 text-sm font-bold text-slate-900 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all w-full shadow-sm h-32"
+                          />
+                          <p className="text-[10px] text-slate-400 font-medium italic">Specific emails authorized for access.</p>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                       <div className="space-y-4">

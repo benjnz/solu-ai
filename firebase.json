@@ -15,7 +15,7 @@
   },
   "apphosting": {
     "backendId": "solu",
-    "rootDir": "backend",
+    "rootDir": ".",
     "ignore": [
       "node_modules",
       ".git",

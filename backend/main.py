@@ -7,6 +7,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import sys
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 def debug_print(msg):
     print(f"DEBUG: {msg}")
@@ -193,9 +195,24 @@ async def delete_agent(agent_id: str):
     Orchestrator.set_agent_status(agent_id, 'terminated')
     return {"status": "success", "message": f"Agent {agent_id} decommissioned."}
 
-@app.get("/health")
-async def health_check():
-    return {"status": "ok", "service": "AI Agent Dispatcher"}
+# --- Static File Serving (React UI) ---
+
+# Check if dist exists (it will in the unified Docker container)
+DIST_DIR = os.path.join(os.path.dirname(__file__), "..", "dist")
+if os.path.exists(DIST_DIR):
+    debug_print(f"Mounting static files from {DIST_DIR}")
+    app.mount("/assets", StaticFiles(directory=os.path.join(DIST_DIR, "assets")), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_react_app(full_path: str):
+        # API requests should already be handled by preceding routes.
+        # This catches anything that isn't an API route.
+        file_path = os.path.join(DIST_DIR, full_path)
+        if os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(DIST_DIR, "index.html"))
+else:
+    debug_print(f"Static directory {DIST_DIR} not found. API only mode.")
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8080))
