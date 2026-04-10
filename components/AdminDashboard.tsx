@@ -598,6 +598,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
   const [extensions, setExtensions] = useState<any[]>([]);
   const [quorumSize, setQuorumSize] = useState(3);
   const [vetoPowerEnabled, setVetoPowerEnabled] = useState(false);
+
+  // --- API KEYS STATE ---
+  const [googleApiKey, setGoogleApiKey] = useState('');
+  const [anthropicApiKey, setAnthropicApiKey] = useState('');
+  const [openaiApiKey, setOpenaiApiKey] = useState('');
+  const [pineconeApiKey, setPineconeApiKey] = useState('');
+  const [pineconeEnv, setPineconeEnv] = useState('us-east-1-aws');
+  const [serperApiKey, setSerperApiKey] = useState('');
   const [registrationStatus, setRegistrationStatus] = useState<'Pending' | 'Active' | 'Archived'>('Active');
   const [reviewIntensity, setReviewIntensity] = useState(0.5);
   const [maxContractValueUSD, setMaxContractValueUSD] = useState(100000);
@@ -906,9 +914,34 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
 
   const handleDeploy = async () => {
     if (!selectedJob) return;
+
+    // Validate API Keys based on model/memory
+    if (model.includes('gemini') && !googleApiKey) {
+      alert("CRITICAL ERROR: Google Gemini API Key is required for the selected Thinking Core.");
+      return;
+    }
+    if (model.includes('claude') && !anthropicApiKey) {
+      alert("CRITICAL ERROR: Anthropic API Key is required for the selected Thinking Core.");
+      return;
+    }
+    if (model.includes('gpt') && !openaiApiKey) {
+      alert("CRITICAL ERROR: OpenAI API Key is required for the selected Thinking Core.");
+      return;
+    }
+    if (memoryType.includes('Pinecone') && !pineconeApiKey) {
+      alert("WARNING: Pinecone API Key is missing. Long-term memory will be disabled for this agent.");
+    }
+
     setIsDeploying(true);
     try {
       const config = {
+        apiKeys: {
+          google: googleApiKey,
+          anthropic: anthropicApiKey,
+          openai: openaiApiKey,
+          pinecone: pineconeApiKey,
+          serper: serperApiKey
+        },
         // 1. Brain (13 tabs)
         brain: {
           model,
@@ -1120,19 +1153,19 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
 
   // --- UI HELPERS FOR ORCHESTRATION ---
   const ConfigSection = ({ title, icon: Icon, description, children }: any) => (
-    <div className="space-y-10 animate-in fade-in duration-500 text-white text-left">
+    <div className="space-y-6 md:space-y-10 animate-in fade-in duration-500 text-white text-left">
       <div className="space-y-2">
-        <h3 className="text-xl font-black flex items-center gap-3"><Icon className="w-6 h-6 text-indigo-400" /> {title}</h3>
-        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed max-w-2xl">{description}</p>
+        <h3 className="text-lg md:text-xl font-black flex items-center gap-3"><Icon className="w-5 h-5 md:w-6 md:h-6 text-indigo-400" /> {title}</h3>
+        <p className="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest leading-relaxed max-w-2xl">{description}</p>
       </div>
-      <div className="bg-[#0b0f19] border border-white/5 p-10 rounded-[3rem] space-y-12 shadow-2xl">
+      <div className="bg-[#0b0f19] border border-white/5 p-6 md:p-10 rounded-3xl md:rounded-[4rem] space-y-8 md:space-y-12 shadow-2xl">
         {children}
       </div>
     </div>
   );
 
   const ParameterGrid = ({ children }: any) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10">
         {children}
     </div>
   );
@@ -1185,17 +1218,68 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
     </div>
   );
 
-  const renderConfigTab = () => {
-    // --- CATEGORY: BRAIN (13 TABS) ---
+  const renderBrainConfig = () => {
     if (configTab === 'infrastructure') return (
       <ConfigSection title="Computing Core" icon={Cloud} description="Select the underlying LLM brain and processing boundary. Pro models offer deeper reasoning for complex logic.">
         <ParameterGrid>
           <SelectField label="Neural Processor" value={model} onChange={setModel} options={['gemini-2.5-flash', 'claude-4.6-sonnet', 'gpt-5.4-mini']} description="Determines processing speed and reasoning fidelity." />
           <SelectField label="Memory Structure" value={memoryType} onChange={setMemoryType} options={['Vector Storage (Pinecone)', 'Relational (Postgres)', 'In-Memory (Redis)', 'Hybrid']} description="How the agent stores and recalls past interactions." />
         </ParameterGrid>
-        <div className="pt-8 border-t border-white/5 space-y-6">
-          <ToggleField label="Isolated Sandbox" checked={sandboxEnabled} onChange={setSandboxEnabled} description="Prevents the agent from accessing the parent host filesystem." />
-          <SelectField label="Processing Boundary" value={processingBoundary} onChange={setProcessingBoundary} options={['Internal', 'Enclave', 'Public']} description="Data isolation level for high-security operations." />
+
+        <div className="pt-8 border-t border-white/5 space-y-10">
+          <div className="space-y-4">
+            <h4 className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.2em] flex items-center gap-2">
+              <Lock className="w-3 h-3" /> Secure Connectivity & API Keys
+            </h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Google Gemini Key</label>
+                <input 
+                  type="password" 
+                  value={googleApiKey} 
+                  onChange={(e) => setGoogleApiKey(e.target.value)} 
+                  className={`w-full bg-[#060913] border ${model.includes('gemini') && !googleApiKey ? 'border-amber-500/50' : 'border-white/10'} rounded-2xl p-4 text-white focus:border-indigo-500 outline-none font-mono text-sm`} 
+                  placeholder="AIza..." 
+                />
+                {model.includes('gemini') && !googleApiKey && <p className="text-[9px] text-amber-500 font-bold uppercase tracking-tight">Required for select Thinking Core</p>}
+              </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Anthropic (Claude) Key</label>
+                <input 
+                  type="password" 
+                  value={anthropicApiKey} 
+                  onChange={(e) => setAnthropicApiKey(e.target.value)} 
+                  className={`w-full bg-[#060913] border ${model.includes('claude') && !anthropicApiKey ? 'border-amber-500/50' : 'border-white/10'} rounded-2xl p-4 text-white focus:border-indigo-500 outline-none font-mono text-sm`} 
+                  placeholder="sk-ant-..." 
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">OpenAI Key</label>
+                <input 
+                  type="password" 
+                  value={openaiApiKey} 
+                  onChange={(e) => setOpenaiApiKey(e.target.value)} 
+                  className={`w-full bg-[#060913] border ${model.includes('gpt') && !openaiApiKey ? 'border-amber-500/50' : 'border-white/10'} rounded-2xl p-4 text-white focus:border-indigo-500 outline-none font-mono text-sm`} 
+                  placeholder="sk-..." 
+                />
+              </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pinecone Key</label>
+                <input 
+                  type="password" 
+                  value={pineconeApiKey} 
+                  onChange={(e) => setPineconeApiKey(e.target.value)} 
+                  className={`w-full bg-[#060913] border ${memoryType.includes('Pinecone') && !pineconeApiKey ? 'border-amber-500/50' : 'border-white/10'} rounded-2xl p-4 text-white focus:border-indigo-500 outline-none font-mono text-sm`} 
+                  placeholder="pcsk_..." 
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-6 pt-8 border-t border-white/5">
+            <ToggleField label="Isolated Sandbox" checked={sandboxEnabled} onChange={setSandboxEnabled} description="Prevents the agent from accessing the parent host filesystem." />
+            <SelectField label="Processing Boundary" value={processingBoundary} onChange={setProcessingBoundary} options={['Internal', 'Enclave', 'Public']} description="Data isolation level for high-security operations." />
+          </div>
         </div>
       </ConfigSection>
     );
@@ -1334,8 +1418,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
         </div>
       </ConfigSection>
     );
+    return null;
+  };
 
-    // --- CATEGORY: INTELLIGENCE (12 TABS) ---
+  const renderIntelligenceConfig = () => {
     if (configTab === 'reasoning') return (
       <ConfigSection title="Thinking Depth" icon={Brain} description="Adjust how much 'CPU-thinking' the agent performs before finalizing an answer.">
         <ParameterGrid>
@@ -1450,19 +1536,21 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
         </ParameterGrid>
       </ConfigSection>
     );
+    return null;
+  };
 
-    // --- CATEGORY: ABILITIES (11 TABS) ---
+  const renderAbilitiesConfig = () => {
     if (configTab === 'connections') return (
       <ConfigSection title="External Connectivity" icon={Globe2} description="Manage the agent's access to third-party platforms like Slack, Discord, or Notion.">
         <div className="space-y-6">
            {connections.length === 0 ? (
-             <div className="p-10 border border-dashed border-white/10 rounded-3xl text-center text-slate-500 text-xs font-black uppercase tracking-widest">
+             <div className="p-6 md:p-10 border border-dashed border-white/10 rounded-3xl text-center text-slate-500 text-[10px] font-black uppercase tracking-widest">
                No Active Connections
              </div>
            ) : (
              <div className="grid grid-cols-1 gap-4">
                {connections.map(conn => (
-                 <div key={conn.id} className="flex items-center justify-between p-6 bg-white/5 rounded-3xl border border-white/5">
+                 <div key={conn.id} className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 bg-white/5 rounded-3xl border border-white/5 gap-6">
                    <div className="flex items-center gap-4">
                      <div className="p-3 bg-indigo-500/10 rounded-2xl text-indigo-400"><Globe2 className="w-5 h-5" /></div>
                      <div>
@@ -1495,7 +1583,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
     if (configTab === 'knowledge') return (
       <ConfigSection title="Static Library" icon={BookOpen} description="Add PDF documents, URLs, or local files to the agent's permanent knowledge base.">
         <div className="space-y-8">
-           <button onClick={handleIngestKnowledge} disabled={isIngesting} className={`w-full p-8 rounded-[2.5rem] border border-dashed border-indigo-500/30 font-black uppercase tracking-widest text-xs transition-all ${isIngesting ? 'bg-indigo-500/20 text-indigo-400 animate-pulse' : 'bg-indigo-500/5 text-indigo-500 hover:bg-indigo-500/10'}`}>
+           <button onClick={handleIngestKnowledge} disabled={isIngesting} className={`w-full p-8 rounded-3xl md:rounded-[2.5rem] border border-dashed border-indigo-500/30 font-black uppercase tracking-widest text-xs transition-all ${isIngesting ? 'bg-indigo-500/20 text-indigo-400 animate-pulse' : 'bg-indigo-500/5 text-indigo-500 hover:bg-indigo-500/10'}`}>
              {isIngesting ? ingestionStatus : '+ Upload Research Library'}
            </button>
            <div className="pt-8 border-t border-white/5 space-y-8">
@@ -1577,9 +1665,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
 
     if (configTab === 'extensions') return (
       <ConfigSection title="Workflow Extensions" icon={Grid} description="Add custom community-built extensions to the agent's executable environment.">
-        <div className="p-12 border border-dashed border-white/10 rounded-3xl text-center">
-           <p className="text-slate-500 text-xs font-black uppercase tracking-widest mb-6">No Extensions Installed</p>
-           <button className="px-8 py-3 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500/20 transition-all">+ Browse Marketplace</button>
+        <div className="p-8 md:p-12 border border-dashed border-white/10 rounded-3xl text-center">
+           <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-6">No Extensions Installed</p>
+           <button className="px-6 py-2.5 md:px-8 md:py-3 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500/20 transition-all">+ Browse Marketplace</button>
         </div>
       </ConfigSection>
     );
@@ -1605,8 +1693,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
         </div>
       </ConfigSection>
     );
+    return null;
+  };
 
-    // --- CATEGORY: SAFETY (9 TABS) ---
+  const renderSafetyConfig = () => {
     if (configTab === 'governance') return (
       <ConfigSection title="Corporate Governance" icon={Shield} description="Define the strictness of internal policy enforcement and audit logging depth.">
         <ParameterGrid>
@@ -1690,8 +1780,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
         </div>
       </ConfigSection>
     );
+    return null;
+  };
 
-    // --- CATEGORY: OPERATIONS (6 TABS) ---
+  const renderOperationsConfig = () => {
     if (configTab === 'collaboration') return (
       <ConfigSection title="Agent Collaboration" icon={Users} description="Manage how this agent interacts with other members of the network.">
         <ParameterGrid>
@@ -1754,8 +1846,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
          </ParameterGrid>
        </ConfigSection>
     );
+    return null;
+  };
 
-    // --- CATEGORY: ECONOMICS (6 TABS) ---
+  const renderEconomicsConfig = () => {
     if (configTab === 'cost_control') return (
       <ConfigSection title="Financial Controls" icon={Wallet} description="Manage the agent's spending limits and budget alerts.">
         <ParameterGrid>
@@ -1771,9 +1865,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
 
     if (configTab === 'scenario_lab') return (
        <ConfigSection title="Scenario Lab" icon={TestTube} description="Simulate 'what-if' scenarios to predict agent behavior under stress or market volatility.">
-         <div className="p-12 border border-dashed border-white/10 rounded-3xl text-center">
-             <p className="text-slate-500 text-xs font-black uppercase tracking-widest mb-6">Mission Outcome Simulations</p>
-             <button className="px-8 py-3 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500/20 transition-all">Simulate Financial Risk</button>
+         <div className="p-8 md:p-12 border border-dashed border-white/10 rounded-3xl text-center">
+             <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest mb-6">Mission Outcome Simulations</p>
+             <button className="px-6 py-2.5 md:px-8 md:py-3 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest hover:bg-indigo-500/20 transition-all">Simulate Financial Risk</button>
          </div>
        </ConfigSection>
     );
@@ -1822,13 +1916,15 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
         </div>
       </ConfigSection>
     );
+    return null;
+  };
 
-    // --- CATEGORY: ENTERPRISE (5 TABS) ---
+  const renderEnterpriseConfig = () => {
     if (configTab === 'legal') return (
       <ConfigSection title="Legal Sovereignty" icon={Gavel} description="Define the legal persona and jurisdiction of the autonomous entity.">
         <ParameterGrid>
           <SelectField label="Entity Type" value={legalEntityType} onChange={setLegalEntityType} options={['DAO-LLC', 'Trust', 'Sovereign']} description="Corporate structure for legal recognition." />
-          <div className="space-y-4">
+          <div className="space-y-4 text-left">
              <label className="text-xs font-black text-white uppercase tracking-widest">Jurisdiction</label>
              <input type="text" value={legalJurisdiction} onChange={(e) => setLegalJurisdiction(e.target.value)} className="w-full bg-[#060913] border border-white/10 rounded-2xl p-4 text-white focus:border-indigo-500 outline-none" />
           </div>
@@ -1855,7 +1951,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
       <ConfigSection title="Brand Sovereignty" icon={Megaphone} description="Configure automated press releases and crisis communication response.">
         <ParameterGrid>
           <ToggleField label="Auto-PR" checked={pressReleaseAutomation} onChange={setPressReleaseAutomation} description="Allow the agent to announce mission milestones on X/LinkedIn." />
-          <SelectField label="Crisis Intensity" value={crisisResponseIntensity} onChange={setCrisisResponseIntensity} options={['Defensive', 'Neutral', 'Aggressive']} description="Response posture for negative mentions." />
+          <SelectField label="Crisis Intensity" value={crisisResponseIntensity} onChange={setCrisisResponseIntensity} options={['Defensive', 'Neutral', 'Aggressive']} description="Posture for negative mentions." />
         </ParameterGrid>
       </ConfigSection>
     );
@@ -1872,7 +1968,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
     if (configTab === 'blueprint_requests') return (
        <ConfigSection title="Blueprint Intake" icon={FileText} description="Manage incoming requests for new agent blueprints from external clients.">
          <div className="space-y-8">
-           <div className="bg-white/5 rounded-3xl p-10 border border-white/5 text-center">
+           <div className="bg-white/5 rounded-3xl p-6 md:p-10 border border-white/5 text-center">
              <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 rounded-full text-[9px] font-black uppercase tracking-widest border border-emerald-500/20 mb-6">
                <Activity className="w-3 h-3" /> System Listening
              </div>
@@ -1883,6 +1979,29 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
            </div>
          </div>
        </ConfigSection>
+    );
+    return null;
+  };
+
+  const renderConfigTab = () => {
+    if (activeCategory === 'Brain') return renderBrainConfig();
+
+    if (activeCategory === 'Intelligence') return renderIntelligenceConfig();
+
+    // --- CATEGORY: ABILITIES (11 TABS) ---
+    if (activeCategory === 'Abilities') return renderAbilitiesConfig();
+    if (activeCategory === 'Safety') return renderSafetyConfig();
+    if (activeCategory === 'Operations') return renderOperationsConfig();
+    if (activeCategory === 'Economics') return renderEconomicsConfig();
+    if (activeCategory === 'Enterprise') return renderEnterpriseConfig();
+
+    return (
+      <div className="p-10 md:p-20 text-center bg-white/5 rounded-3xl md:rounded-[4rem] border border-dashed border-white/10">
+        <p className="text-slate-500 font-mono text-[10px] md:text-xs uppercase tracking-widest italic">
+          Module "{configTab.replace(/_/g, ' ')}" Initialized & Ready for Calibration
+        </p>
+        <p className="text-indigo-400/50 text-[9px] font-black uppercase mt-4 tracking-tighter">Production-Grade Parameters Active</p>
+      </div>
     );
 
     return (
@@ -2104,25 +2223,26 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
       {selectedJob && (
         <div className="animate-in fade-in slide-in-from-right-8 duration-500">
           <button onClick={() => navigate('/admin')} className="mb-6 flex items-center gap-2 px-4 py-2 bg-slate-900 border border-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-slate-800 transition-all">
-            <ChevronLeft className="w-4 h-4" /> Back to Dashboard
+            <ChevronLeft className="w-4 h-4" /> Back
           </button>
           
-          <div className="bg-[#060913] rounded-[4rem] p-10 lg:p-16 border border-white/5 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.6)] relative overflow-hidden">
+          <div className="bg-[#060913] rounded-3xl md:rounded-[4rem] p-6 lg:p-16 border border-white/5 shadow-[0_40px_100px_-20px_rgba(0,0,0,0.6)] relative overflow-hidden">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-indigo-500/10 blur-[100px] pointer-events-none" />
             
-            <div className="flex flex-col gap-16 relative z-10">
+            <div className="flex flex-col gap-10 md:gap-16 relative z-10">
               {/* Orchestration Header */}
-              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-10">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 md:gap-10">
                 <div className="space-y-4">
-                  <h2 className="text-5xl font-black text-white tracking-tighter">Agent Orchestration Layer</h2>
-                  <p className="text-slate-500 font-mono text-[10px] uppercase tracking-widest flex items-center gap-3">
-                    <Database className="w-3 h-3" /> System ID: <span className="text-indigo-400">{selectedJob.id.slice(0, 8)}</span>
+                  <h2 className="text-3xl md:text-5xl font-black text-white tracking-tighter">Agent Orchestration Layer</h2>
+                  <p className="text-slate-500 font-mono text-[9px] md:text-[10px] uppercase tracking-widest flex items-center gap-3">
+                    <Database className="w-3 h-3" /> ID: <span className="text-indigo-400">{selectedJob.id.slice(0, 8)}</span>
                     <span className="w-1 h-1 rounded-full bg-slate-800" />
-                    <Clock className="w-3 h-3" /> Sync Latency: <span className="text-emerald-400">12ms</span>
+                    <Clock className="w-3 h-3" /> Latency: <span className="text-emerald-400">12ms</span>
                   </p>
                 </div>
-                <div className="flex flex-col gap-4 min-w-0 max-w-full">
-                   <div className="flex bg-[#0b0f19] p-2 rounded-2xl border border-white/5 backdrop-blur-xl overflow-x-auto max-w-full scrollbar-none items-center">
+                <div className="flex flex-col gap-4 min-w-0 max-w-full w-full lg:w-auto">
+                   <div className="flex bg-[#0b0f19] p-2 rounded-2xl border border-white/5 backdrop-blur-xl overflow-x-auto max-w-full scrollbar-none items-center relative">
+                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#0b0f19] to-transparent pointer-events-none z-10 md:hidden" />
                     {Object.keys(CATEGORIES).map((cat) => (
                       <button
                         key={cat}
@@ -2130,7 +2250,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
                           setActiveCategory(cat);
                           setConfigTab(CATEGORIES[cat as keyof typeof CATEGORIES][0]);
                         }}
-                        className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeCategory === cat ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                        className={`px-4 md:px-6 py-2.5 md:py-3 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeCategory === cat ? 'bg-indigo-500 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
                       >
                         {cat}
                       </button>
@@ -2138,12 +2258,13 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
                   </div>
                   
                   {/* Horizontal Subcategories Navigation */}
-                  <div className="flex bg-white/5 p-1.5 rounded-xl border border-white/5 overflow-x-auto max-w-full gap-2 scrollbar-none">
+                  <div className="flex bg-white/5 p-1.5 rounded-xl border border-white/5 overflow-x-auto max-w-full gap-2 scrollbar-none relative">
+                    <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-[#060913] to-transparent pointer-events-none z-10 md:hidden" />
                     {CATEGORIES[activeCategory as keyof typeof CATEGORIES].map((tab: any) => (
                       <button
                         key={tab}
                         onClick={() => setConfigTab(tab)}
-                        className={`px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${configTab === tab ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}
+                        className={`px-3 md:px-4 py-1.5 md:py-2 rounded-lg text-8 md:text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${configTab === tab ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-slate-500 hover:text-slate-300 hover:bg-white/5'}`}
                       >
                         {configTab === tab && <div className="w-1 h-1 rounded-full bg-indigo-500 animate-pulse" />}
                         {tab.replace(/_/g, ' ')}

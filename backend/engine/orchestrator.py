@@ -768,7 +768,8 @@ class Orchestrator:
                 directives_data = directives_doc.to_dict()
                 sovereign_directives = f"\n### SOVEREIGN CLIENT DIRECTIVES (MANDATORY):\n{directives_data.get('directives', '')}\n"
             
-            # 2. Extract tools and model
+            # 2. Extract tools, model and API keys
+            api_keys = config.get('apiKeys', {})
             capabilities = []
             if 'connections' in config:
                 capabilities.extend([c['type'] for c in config['connections']])
@@ -780,19 +781,18 @@ class Orchestrator:
             # Prepend directives to backstory
             enhanced_backstory = f"{sovereign_directives}\n{blueprint.get('backstory', '')}"
             
-            # Instantiate LLM based on config (simulating choice, defaulting to Gemini)
             # Instantiate LLM based on config
             model_name = config.get('model', "gemini-1.5-flash")
             
             if "claude" in model_name.lower():
                 from langchain_anthropic import ChatAnthropic
-                llm = ChatAnthropic(model=model_name)
+                llm = ChatAnthropic(model=model_name, anthropic_api_key=api_keys.get('anthropic'))
             elif "gpt" in model_name.lower():
                 from langchain_openai import ChatOpenAI
-                llm = ChatOpenAI(model=model_name)
+                llm = ChatOpenAI(model=model_name, openai_api_key=api_keys.get('openai'))
             else:
                 from langchain_google_genai import ChatGoogleGenerativeAI
-                llm = ChatGoogleGenerativeAI(model=model_name)
+                llm = ChatGoogleGenerativeAI(model=model_name, google_api_key=api_keys.get('google'))
 
             # 3. Handle Hierarchical Agent Delegation
             allow_delegation = config.get('collaboration', {}).get('allowDelegation', False)

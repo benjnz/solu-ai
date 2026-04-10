@@ -560,7 +560,7 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({
                   {activeTab === 'approvals' && <><CheckCircle className="w-5 h-5 text-emerald-600" /> Approvals</>}
                   {activeTab === 'portal' && <><Globe className="w-5 h-5 text-indigo-500" /> Employee Portal Settings</> }
                 </h3>
-                <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200">
+                <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 overflow-x-auto scrollbar-none max-w-full">
                   {[
                     { id: 'analytics', label: 'Activity' },
                     { id: 'strategy', label: 'Instructions' },
@@ -571,7 +571,7 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({
                     <button
                       key={tab.id}
                       onClick={() => setActiveTab(tab.id)}
-                      className={`px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                      className={`px-4 md:px-5 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${activeTab === tab.id ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                       {tab.label}
                     </button>
@@ -605,18 +605,18 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({
                         }, {})
                       ).map(([mid, missionLogs]: [any, any]) => (
                         <div key={mid} className="bg-white border border-slate-200 rounded-[3rem] p-10 space-y-8 transition-all hover:border-indigo-500/20 hover:shadow-lg shadow-sm">
-                          <div className="flex flex-col lg:flex-row justify-between items-start gap-6">
-                            <div className="space-y-3">
-                              <div className="flex flex-wrap items-center gap-3">
-                                <span className="px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[10px] font-black tracking-widest uppercase border border-indigo-100">Task Session: {mid}</span>
-                                <span className={`px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase ${missionLogs.some((l: any) => l.type === 'error') ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
-                                  {missionLogs.some((l: any) => l.type === 'error') ? 'Errors Detected' : 'Clean Execution'}
+                          <div className="flex flex-col lg:flex-row justify-between items-start gap-4 lg:gap-6">
+                            <div className="space-y-3 w-full">
+                              <div className="flex flex-wrap items-center gap-2 md:gap-3">
+                                <span className="px-2 md:px-3 py-1 bg-indigo-50 text-indigo-600 rounded-lg text-[8px] md:text-[10px] font-black tracking-widest uppercase border border-indigo-100">Session: {mid.slice(0, 12)}</span>
+                                <span className={`px-2 md:px-3 py-1 rounded-lg text-[8px] md:text-[10px] font-black tracking-widest uppercase ${missionLogs.some((l: any) => l.type === 'error') ? 'bg-rose-50 text-rose-600 border border-rose-100' : 'bg-emerald-50 text-emerald-600 border border-emerald-100'}`}>
+                                  {missionLogs.some((l: any) => l.type === 'error') ? 'Errors' : 'Clean'}
                                 </span>
-                                <span className="px-3 py-1 bg-slate-50 text-slate-400 rounded-lg text-[10px] font-black uppercase tracking-widest border border-slate-100">
+                                <span className="px-2 md:px-3 py-1 bg-slate-50 text-slate-400 rounded-lg text-[8px] md:text-[10px] font-black uppercase tracking-widest border border-slate-100">
                                   {new Date(missionLogs[0].timestamp?.toDate?.() || Date.now()).toLocaleTimeString()}
                                 </span>
                               </div>
-                              <h4 className="text-2xl font-black text-slate-900 leading-tight">{missionLogs[0].message.length > 100 ? missionLogs[0].message.substring(0, 100) + '...' : missionLogs[0].message}</h4>
+                              <h4 className="text-xl md:text-2xl font-black text-slate-900 leading-tight">{missionLogs[0].message.length > 80 ? missionLogs[0].message.substring(0, 80) + '...' : missionLogs[0].message}</h4>
                             </div>
                             <div className="flex grid grid-cols-2 lg:flex lg:flex-row items-center gap-4 w-full lg:w-auto">
                               <div className="flex flex-col items-end gap-1 px-4 py-2 bg-slate-50 rounded-2xl border border-slate-100 text-right w-full lg:w-32">

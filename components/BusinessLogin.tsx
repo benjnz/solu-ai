@@ -69,8 +69,8 @@ const BusinessLogin: React.FC = () => {
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 text-amber-600 rounded-full text-sm font-bold tracking-wide uppercase">
             <Building2 className="w-4 h-4" /> Enterprise Access
           </div>
-          <h1 className="text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
-            Scale with Sovereign <br/>
+          <h1 className="text-5xl font-extrabold text-slate-900 tracking-tight leading-tight uppercase italic">
+            Scale with <br/>
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">Enterprise AI</span>
           </h1>
 
@@ -107,11 +107,14 @@ const BusinessLogin: React.FC = () => {
             <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-amber-400 via-orange-500 to-amber-600"></div>
             
             <div className="mb-10 text-center lg:text-left">
-              <h2 className="text-3xl font-extrabold text-slate-900 mb-2">
+              <div className="lg:hidden inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-amber-100 mb-6">
+                <Building2 className="w-3.5 h-3.5" /> Enterprise Access
+              </div>
+              <h2 className="text-2xl md:text-3xl font-black text-slate-900 mb-2 uppercase italic tracking-tighter">
                 {isLogin ? "Welcome Back" : "Start your Journey"}
               </h2>
-              <p className="text-slate-500 font-medium">
-                {isLogin ? "Sign in to your business dashboard" : "Create your business account to get started"}
+              <p className="text-slate-500 font-medium text-sm md:text-base px-4 lg:px-0">
+                {isLogin ? "Sign in to your business dashboard" : "Create your account to get started"}
               </p>
             </div>
 

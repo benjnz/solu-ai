@@ -368,7 +368,7 @@ const AppContent: React.FC = () => {
       {(location.pathname.includes('client') || location.pathname.includes('associate') || location.pathname.includes('admin')) && (
         <div className="bg-slate-900 border-b border-white/5 py-3 px-4 overflow-hidden relative group">
           <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 via-transparent to-rose-500/10 opacity-50" />
-          <div className="max-w-7xl mx-auto flex items-center justify-center gap-12 relative text-white">
+          <div className="max-w-7xl mx-auto flex items-center justify-start md:justify-center gap-8 md:gap-12 relative text-white overflow-x-auto scrollbar-none py-1">
             
             {user?.role === 'client' && user.companyDetails && (
               <>
@@ -376,7 +376,7 @@ const AppContent: React.FC = () => {
                   <ShieldCheck className="w-4 h-4 text-amber-500" />
                   <div className="flex flex-col">
                     <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-tight">Enterprise</span>
-                    <span className="text-xs font-black tracking-tighter truncate max-w-[120px] leading-tight">{user.companyDetails.name}</span>
+                    <span className="text-[10px] md:text-xs font-black tracking-tighter truncate max-w-[100px] md:max-w-[120px] leading-tight">{user.companyDetails.name}</span>
                   </div>
                 </div>
                 <div className="h-6 w-px bg-white/10 shrink-0" />
@@ -384,18 +384,20 @@ const AppContent: React.FC = () => {
                   <Layers className="w-4 h-4 text-slate-400" />
                   <div className="flex flex-col">
                     <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-tight">Industry</span>
-                    <span className="text-xs font-black tracking-tighter leading-tight">{user.companyDetails.industry}</span>
+                    <span className="text-[10px] md:text-xs font-black tracking-tighter leading-tight whitespace-nowrap">{user.companyDetails.industry}</span>
                   </div>
                 </div>
                 <div className="h-6 w-px bg-white/10 shrink-0" />
               </>
             )}
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0">
               <Activity className="w-4 h-4 text-indigo-400" />
               <div className="flex flex-col">
+                <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-tight">
                   {user?.role === 'client' ? 'Deployed' : 'Active Agents'}
-                <span className="text-sm font-black tracking-tighter leading-tight">
+                </span>
+                <span className="text-[10px] md:text-sm font-black tracking-tighter leading-tight whitespace-nowrap">
                   {user?.role === 'client' 
                     ? deployedAgents.filter(a => a.clientId === user.uid || (!a.clientId && (a.clientName === user.name || a.clientName === user.email))).length
                     : deployedAgents.length} 
@@ -404,15 +406,15 @@ const AppContent: React.FC = () => {
               </div>
             </div>
             
-            <div className="h-6 w-px bg-white/10" />
+            <div className="h-6 w-px bg-white/10 shrink-0" />
             
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0">
               <Zap className="w-4 h-4 text-amber-400" />
               <div className="flex flex-col">
                 <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-tight">
                   {user?.role === 'client' ? 'Awaiting' : 'Consumption'}
                 </span>
-                <span className="text-sm font-black tracking-tighter leading-tight">
+                <span className="text-[10px] md:text-sm font-black tracking-tighter leading-tight whitespace-nowrap">
                   {user?.role === 'client'
                     ? activeJobs.filter(j => (j.clientId === user.uid || (!j.clientId && (j.clientName === user.name || j.clientName === user.email))) && (j.status === 'Open' || j.status === 'open')).length
                     : `$${deployedAgents.reduce((acc, a) => acc + (a.total_cost_usd || 0), 0).toFixed(4)}`}
@@ -423,15 +425,15 @@ const AppContent: React.FC = () => {
               </div>
             </div>
 
-            <div className="h-6 w-px bg-white/10" />
+            <div className="h-6 w-px bg-white/10 shrink-0" />
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 shrink-0">
               <Cpu className="w-4 h-4 text-indigo-400" />
               <div className="flex flex-col">
                 <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-tight">
                   {user?.role === 'client' ? 'Fleet Cost' : 'Latency'}
                 </span>
-                <span className="text-sm font-black tracking-tighter leading-tight">
+                <span className="text-[10px] md:text-sm font-black tracking-tighter leading-tight whitespace-nowrap">
                   {user?.role === 'client'
                     ? `$${deployedAgents.filter(a => a.clientId === user.uid || (!a.clientId && (a.clientName === user.name || a.clientName === user.email))).reduce((acc, a) => acc + (a.total_cost_usd || 0), 0).toFixed(4)}`
                     : '124ms'} 

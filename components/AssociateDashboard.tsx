@@ -746,7 +746,7 @@ const formatTime = (seconds: number) => {
             </div>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="p-6 bg-slate-50 rounded-xl border border-slate-100">
                 <h3 className="font-semibold text-slate-900 mb-2">Verification Status</h3>
                 <p className="text-sm text-slate-600 mb-4">Complete the IQ test and Nodal Automation Challenge to unlock client projects.</p>
@@ -768,7 +768,7 @@ const formatTime = (seconds: number) => {
             </div>
             <div className="p-6 bg-slate-50 rounded-xl border border-slate-100">
                 <h3 className="font-semibold text-slate-900 mb-2">Platform Activity</h3>
-                <p className="text-sm text-slate-600 mb-4">{availableJobs.length} active projects matching your skills.</p>
+                <p className="text-sm text-slate-600 mb-4 text-slate-600">{availableJobs.length} active projects matching your skills.</p>
                 <button 
                     onClick={() => isVetted ? setView('dashboard') : null} 
                     disabled={!isVetted} 

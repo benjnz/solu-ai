@@ -61,22 +61,22 @@ const Login: React.FC = () => {
   }
 
   return (
-    <div className="flex flex-col md:flex-row items-center justify-center min-h-[80vh] px-4 py-12 gap-12 lg:gap-24 animate-in fade-in slide-in-from-bottom-8 duration-700">
+    <div className="flex flex-col md:flex-row items-center justify-center min-h-screen px-6 py-8 md:py-12 gap-10 md:gap-12 lg:gap-24 animate-in fade-in slide-in-from-bottom-8 duration-700">
       {/* Left Column: Associate Value Prop */}
-      <div className="max-w-md space-y-8">
-        <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-xs font-bold uppercase tracking-wider border border-amber-100">
-           <Terminal className="w-4 h-4" /> Sovereign Associate Network
+      <div className="max-w-md space-y-6 md:space-y-8 text-center md:text-left">
+        <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-500/10 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-[0.2em] border border-amber-100 mx-auto md:mx-0">
+           <Terminal className="w-3.5 h-3.5" /> Sovereign Network
         </div>
 
-        <h1 className="text-4xl lg:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
-          Become a solu AI <br/>
+        <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 tracking-tighter leading-tight uppercase italic">
+          Solu AI <br/>
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-orange-600">Expert Agent</span>
         </h1>
-        <p className="text-lg text-slate-500 leading-relaxed font-medium">
-          Join the elite network of sovereign automation experts. Solve complex enterprise problems and deploy autonomous agents at scale.
+        <p className="text-base md:text-lg text-slate-500 leading-relaxed font-medium">
+          Join the elite network of sovereign automation experts. Solve complex enterprise problems at scale.
         </p>
 
-        <div className="space-y-5 pt-4">
+        <div className="hidden md:block space-y-5 pt-4">
           <div className="flex items-center gap-4 group">
              <div className="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100 text-emerald-500 group-hover:scale-110 transition-transform">
                <CheckCircle className="w-4 h-4" />
@@ -99,7 +99,7 @@ const Login: React.FC = () => {
       </div>
 
       {/* Login/Signup Card */}
-      <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-100 max-w-md w-full relative overflow-hidden">
+      <div className="bg-white p-8 md:p-12 rounded-[2.5rem] shadow-[0_32px_64px_-16px_rgba(0,0,0,0.1)] border border-slate-100 max-w-md w-full relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-slate-800 to-slate-900"></div>
         
         <div className="mb-8">
