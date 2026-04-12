@@ -153,6 +153,7 @@ const ControlSetting = ({ label, enabled, onClick }: { label: string, enabled: b
 interface BusinessDashboardProps {
   isDeployed?: boolean;
   isProvisioning?: boolean;
+  isAwaitingDeployment?: boolean;
   onOpenTool?: () => void;
   agentId?: string;
   clientName?: string;
@@ -163,6 +164,7 @@ interface BusinessDashboardProps {
 const BusinessDashboard: React.FC<BusinessDashboardProps> = ({ 
   isDeployed = false, 
   isProvisioning = false, 
+  isAwaitingDeployment = false,
   onOpenTool, 
   agentId, 
   clientName,
@@ -1100,7 +1102,7 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({
       {/* End Blurred Session Wrapper */}
       </div>
 
-      {!isDeployed && !isProvisioning && (
+      {!isDeployed && !isProvisioning && !isAwaitingDeployment && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-500 pointer-events-none">
           <div className="bg-white/90 backdrop-blur-3xl p-16 rounded-[4rem] border border-slate-200 max-w-2xl w-full text-center space-y-10 shadow-2xl animate-in zoom-in-95 duration-1000 pointer-events-auto">
             <div className="w-28 h-28 bg-indigo-600 rounded-[2.5rem] flex items-center justify-center mx-auto shadow-2xl shadow-indigo-200 rotate-6 group">
@@ -1117,41 +1119,30 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({
         </div>
       )}
 
-      {isProvisioning && !isDeployed && (
+      {(isProvisioning || isAwaitingDeployment) && !isDeployed && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 animate-in fade-in duration-500 pointer-events-none">
           <div className="bg-white/90 backdrop-blur-3xl p-10 md:p-16 rounded-[4rem] border border-slate-200 max-w-3xl w-full text-center space-y-10 shadow-2xl animate-in zoom-in-95 duration-1000 max-h-[90vh] overflow-y-auto pointer-events-auto">
             <div className="w-20 h-20 bg-emerald-500 rounded-3xl flex items-center justify-center mx-auto shadow-2xl shadow-emerald-100 rotate-6 group">
-              <CheckCircle className="w-10 h-10 text-white -rotate-6 animate-pulse" />
+               {isAwaitingDeployment ? <Loader2 className="w-10 h-10 text-white -rotate-6 animate-spin" /> : <CheckCircle className="w-10 h-10 text-white -rotate-6 animate-pulse" />}
             </div>
             
             <div className="space-y-4 text-center">
-              <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">Active Build Requests</h2>
-              <p className="text-slate-500 text-sm font-medium">Our AI Expert team is currently architecting your custom agent fleet.</p>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tighter uppercase">{isAwaitingDeployment ? 'Awaiting Agent Deployment' : 'Active Build Request'}</h2>
+              <p className="text-slate-500 text-sm font-medium">
+                {isAwaitingDeployment 
+                  ? 'Your agent is in the final staging phase. You will receive an alert once the node is live.' 
+                  : 'Our AI Expert team is currently architecting your custom agent infrastructure.'}
+              </p>
             </div>
 
-            <div className="space-y-3 text-left">
-              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] px-4">Pending Infrastructure ({activeJobs.filter(j => j.status !== 'Deployed').length})</h4>
-              <div className="space-y-2 max-h-60 overflow-y-auto pr-2 custom-scrollbar">
-                {activeJobs.filter(j => j.status !== 'Deployed').map((job) => (
-                  <div key={job.id} className="bg-white border border-slate-100 p-5 rounded-3xl flex items-center justify-between group hover:border-emerald-500/30 transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 transition-colors">
-                        <FileText className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-900 text-sm">{job.blueprint?.jobTitle || "Custom Agent Build"}</p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{job.postedDate || "Recently Submitted"}</p>
-                      </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="px-3 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-widest border border-amber-100 animate-pulse">
-                        {job.status}
-                      </span>
-                      <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Phase: Provisioning</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
+            <div className="bg-emerald-50 border border-emerald-100 p-6 rounded-3xl flex items-center gap-4 text-left">
+               <div className="p-3 bg-emerald-500 rounded-xl text-white">
+                 <Activity className="w-5 h-5" />
+               </div>
+               <div>
+                 <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">Selected Job Status</p>
+                 <p className="text-lg font-black text-slate-900 leading-none capitalize">{activeJobs.find(j => j.id === agentId)?.status || 'Processing'}</p>
+               </div>
             </div>
 
             <div className="pt-6 border-t border-slate-100 flex flex-col items-center gap-4">
@@ -1160,10 +1151,9 @@ const BusinessDashboard: React.FC<BusinessDashboardProps> = ({
                 className="w-full py-5 bg-slate-900 text-white font-black rounded-3xl shadow-xl shadow-slate-900/20 hover:bg-black hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 group"
               >
                 <Sparkles className="w-5 h-5 text-amber-400 group-hover:rotate-12 transition-transform" />
-                Initialize New Agent Build
+                Initialize Another Agent Build
                 <ArrowUpRight className="w-4 h-4 text-slate-400" />
               </button>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Contact support@solu.ai for priority deployment</p>
             </div>
           </div>
         </div>

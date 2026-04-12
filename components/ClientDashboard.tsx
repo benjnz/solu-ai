@@ -134,50 +134,53 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ onPostJob, onOpenTool
 
   // Use global jobs state to sync deployment status
   const [deployedFleet, setDeployedFleet] = useState<JobPost[]>([]);
+  const [pendingFleet, setPendingFleet] = useState<JobPost[]>([]);
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    // Primary Filter: UID (clientId), Fallback: clientName (for legacy data)
-    const myJobs = activeJobs.filter(j => j.clientId === user.uid || (!j.clientId && j.clientName === (user.name || user.email)));
-    const myDeployed = myJobs.filter(j => j.status === 'Deployed');
-    setDeployedFleet(myDeployed);
     
-    if (myDeployed.length > 0) {
-      setIsDeployed(true);
-      setIsProvisioning(false);
-      // Default to first one if none selected
-      if (!selectedAgentId) setSelectedAgentId(myDeployed[0].id);
-      
-      // Keep state blueprint in sync for the strategy view
-      const activeAgent = myDeployed.find(a => a.id === selectedAgentId) || myDeployed[0];
-      if (activeAgent?.blueprint && (!blueprint || view !== 'blueprint')) {
-         setBlueprint(activeAgent.blueprint);
+    // Filter all jobs for this client
+    const myJobs = activeJobs.filter(j => j.clientId === user.uid || (!j.clientId && j.clientName === (user.name || user.email)));
+    
+    const myDeployed = myJobs.filter(j => j.status === 'Deployed');
+    const myPending = myJobs.filter(j => j.status !== 'Deployed' && j.status !== 'Completed');
+    
+    setDeployedFleet(myDeployed);
+    setPendingFleet(myPending);
+    
+    // Auto-select first available if none selected
+    if (!selectedAgentId) {
+      if (myDeployed.length > 0) setSelectedAgentId(myDeployed[0].id);
+      else if (myPending.length > 0) setSelectedAgentId(myPending[0].id);
+    }
+    
+    const activeEntry = myJobs.find(j => j.id === selectedAgentId) || myJobs[0];
+    
+    if (activeEntry) {
+      if (activeEntry.status === 'Deployed') {
+        setIsDeployed(true);
+        setIsProvisioning(false);
+        setIsAwaitingDeployment(false);
+        setBlueprint(activeEntry.blueprint || null);
+      } else if (activeEntry.status === 'Awaiting Deployment') {
+        setIsDeployed(false);
+        setIsProvisioning(false);
+        setIsAwaitingDeployment(true);
+        setPendingJob(activeEntry);
+        setBlueprint(activeEntry.blueprint || null);
+      } else {
+        setIsDeployed(false);
+        setIsProvisioning(true);
+        setIsAwaitingDeployment(false);
+        setBlueprint(activeEntry.blueprint || null);
       }
     } else {
-      const awaitingJob = myJobs.find(j => j.status === 'Awaiting Deployment');
-      if (awaitingJob) {
-        setIsAwaitingDeployment(true);
-        setPendingJob(awaitingJob);
-        if (awaitingJob.notificationEmail && !notificationEmail) {
-          setNotificationEmail(awaitingJob.notificationEmail);
-          setEmailStatus('saved');
-        }
-      } else {
-        setIsAwaitingDeployment(false);
-        setPendingJob(null);
-      }
-
-      const myProvisioning = myJobs.find(j => j.status !== 'Deployed' && j.status !== 'Completed' && j.status !== 'Awaiting Deployment');
-      if (myProvisioning) {
-        setIsProvisioning(true);
-        setIsDeployed(false);
-      } else {
-        setIsProvisioning(false);
-        setIsDeployed(false);
-      }
+      setIsDeployed(false);
+      setIsProvisioning(false);
+      setIsAwaitingDeployment(false);
     }
-  }, [activeJobs, user, selectedAgentId, view]);
+  }, [activeJobs, user, selectedAgentId]);
 
 
   if (isLoading || isRefining) {
@@ -196,22 +199,41 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ onPostJob, onOpenTool
       {showOnboarding && user && (
         <OnboardingForm uid={user.uid} onComplete={() => setShowOnboarding(false)} />
       )}
-      {isDeployed && (
+      {(isDeployed || deployedFleet.length > 0 || pendingFleet.length > 0) && (
         <div className="flex flex-col items-center mb-12 space-y-6">
-          {deployedFleet.length > 1 && (
-            <div className="flex items-center gap-4 bg-white border border-slate-200 px-6 py-3 rounded-3xl shadow-sm animate-in slide-in-from-top-4 duration-500">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Active Fleet:</span>
-              <select 
-                value={selectedAgentId || ''} 
-                onChange={(e) => setSelectedAgentId(e.target.value)}
-                className="bg-transparent text-slate-900 font-bold text-xs focus:ring-0 border-none appearance-none cursor-pointer pr-8 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSJibGFjayI+PHBhdGggc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2Utd2lkdGg9IjIiIGQ9Ik0xOSA5bC03IDctNy03Ii8+PC9zdmc+')] bg-[length:16px] bg-[right_center] bg-no-repeat"
-              >
+          <div className="flex items-center gap-4 bg-white border border-slate-200 px-6 py-3 rounded-3xl shadow-sm animate-in slide-in-from-top-4 duration-500">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Your Agent Fleet:</span>
+            <select 
+              value={selectedAgentId || ''} 
+              onChange={(e) => setSelectedAgentId(e.target.value)}
+              className="bg-transparent text-slate-900 font-bold text-xs focus:ring-0 border-none appearance-none cursor-pointer pr-8 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGZpbGw9Im5vbmUiIHZpZXdCb3g9IjAgMCAyNCAyNCIgc3Ryb2tlPSJibGFjayI+PHBhdGggc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIiBzdHJva2Utd2lkdGg9IjIiIGQ9Ik0xOSA5bC03IDctNy03Ii8+PC9zdmc+')] bg-[length:16px] bg-[right_center] bg-no-repeat"
+            >
+              <optgroup label="Deployed & Active">
                 {deployedFleet.map(agent => (
-                  <option key={agent.id} value={agent.id} className="bg-white text-slate-900">{agent.blueprint?.jobTitle || agent.id}</option>
+                  <option key={agent.id} value={agent.id} className="bg-white text-slate-900">
+                    🟢 {agent.blueprint?.jobTitle || agent.agentName || agent.id}
+                  </option>
                 ))}
-              </select>
-            </div>
-          )}
+              </optgroup>
+              {pendingFleet.length > 0 && (
+                <optgroup label="Pending Infrastructure">
+                  {pendingFleet.map(agent => (
+                    <option key={agent.id} value={agent.id} className="bg-white text-slate-900">
+                      ⏳ {agent.blueprint?.jobTitle || agent.agentName || 'New Request'} ({agent.status})
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+            <button 
+              onClick={onOpenTool}
+              className="ml-4 p-2 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 transition-all shadow-lg shadow-indigo-200 group"
+              title="Request New Agent"
+            >
+              <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" />
+            </button>
+          </div>
+          
           <div className="bg-slate-100 p-1 rounded-2xl border border-slate-200 flex gap-1">
              <button onClick={() => setView('dashboard')} className={`flex items-center gap-2 px-8 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all ${view === 'dashboard' ? 'bg-white shadow-sm text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}>
                 <LayoutDashboard className="w-3.5 h-3.5" /> Monitoring
@@ -326,6 +348,7 @@ const ClientDashboard: React.FC<ClientDashboardProps> = ({ onPostJob, onOpenTool
         <BusinessDashboard 
           isDeployed={isDeployed} 
           isProvisioning={isProvisioning}
+          isAwaitingDeployment={isAwaitingDeployment}
           onOpenTool={onOpenTool} 
           activeJobs={activeJobs}
           agentId={selectedAgentId || activeJobs.find(j => j.clientId === user?.uid || j.clientName === (user?.name || user?.email))?.id}

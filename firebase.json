@@ -22,12 +22,14 @@
       "firebase-debug.log",
       "firebase-debug.*.log",
       "functions"
-    ]
+    ],
+    "alwaysDeployFromSource": true
   },
   "functions": {
     "source": "functions"
   },
   "firestore": {
-    "rules": "firestore.rules"
+    "rules": "firestore.rules",
+    "database": "(default)"
   }
 }

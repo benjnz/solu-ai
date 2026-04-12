@@ -1282,6 +1282,16 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
                   placeholder="pcsk_..." 
                 />
               </div>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Serper (Web Search) Key</label>
+                <input 
+                  type="password" 
+                  value={serperApiKey} 
+                  onChange={(e) => setSerperApiKey(e.target.value)} 
+                  className="w-full bg-[#060913] border border-white/10 rounded-2xl p-4 text-white focus:border-indigo-500 outline-none font-mono text-sm" 
+                  placeholder="serp_..." 
+                />
+              </div>
             </div>
           </div>
 
@@ -1567,7 +1577,17 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ jobs, onUpdateJob, depl
                        <p className="text-[10px] text-slate-500 font-bold">{conn.name}</p>
                      </div>
                    </div>
-                   <ToggleField label="Active" checked={conn.isEnabled} onChange={(val) => handleUpdateConnection(conn.id, { isEnabled: val })} />
+                    <div className="flex flex-col gap-2 flex-1 md:max-w-xs">
+                       <label className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Platform API Key</label>
+                       <input 
+                         type="password"
+                         value={conn.apiKey || ''}
+                         onChange={(e) => handleUpdateConnection(conn.id, { apiKey: e.target.value })}
+                         placeholder="Paste key here..."
+                         className="bg-black/20 border border-white/5 rounded-xl px-4 py-2 text-[10px] text-white focus:border-indigo-500 outline-none font-mono"
+                       />
+                    </div>
+                    <ToggleField label="Active" checked={conn.isEnabled} onChange={(val) => handleUpdateConnection(conn.id, { isEnabled: val })} />
                  </div>
                ))}
              </div>
