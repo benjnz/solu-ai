@@ -37,9 +37,19 @@ app = FastAPI(
 
 
 # CORS Configuration
+origins = [
+    "https://demo.solu.uk",
+    "https://solu.uk",
+    "https://www.solu.uk",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "https://soluaiblueprint-62038680-8d4ee.web.app",
+    "https://soluaiblueprint-62038680-8d4ee.firebaseapp.com"
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
